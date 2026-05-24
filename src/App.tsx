@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
 import OnboardingSimulator from './components/OnboardingSimulator';
 import AthleteWorkspace from './components/AthleteWorkspace';
 import TrainerDashboardSimulator from './components/TrainerDashboardSimulator';
@@ -16,7 +16,7 @@ export default function App() {
     localStorage.setItem('APP_THEME', newTheme);
   };
 
-  // Simulated biometric success handler
+  // Manipulador simulado de sucesso no login
   const handleLoginSuccess = (code: string) => {
     setAthleteName(code);
     setAuthorized(true);
@@ -34,7 +34,7 @@ export default function App() {
       id="app-workspace-root"
     >
       
-      {/* Background Micro Grid pattern */}
+      {/* Padrão de Micro Grid no Fundo */}
       <div 
         className={`absolute inset-0 pointer-events-none transition-opacity ${
           theme === 'light' 
@@ -44,22 +44,22 @@ export default function App() {
         style={{ backgroundPosition: 'center' }}
       />
       
-      {/* Fluid Liquid Glass floating mercury orbs behind the dashboard simulator view */}
+      {/* Orbes fluidos de efeito vidro/mercúrio atrás do simulador */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-        <div className={`absolute top-[18%] left-[-20%] w-[280px] h-[280px] rounded-full filter blur-[70px] mix-blend-screen animate-mercury-1 ${
+        <div className={`absolute top-[18%] left-[-20%] w-[280px] h-[280px] rounded-full filter blur-[70px] mix-blend-screen ${
           theme === 'light' ? 'bg-[#10b981]/[0.08]' : 'bg-[#059669]/[0.12]'
         }`} />
-        <div className={`absolute bottom-[22%] right-[-20%] w-[330px] h-[330px] rounded-full filter blur-[90px] mix-blend-screen animate-mercury-2 ${
+        <div className={`absolute bottom-[22%] right-[-20%] w-[330px] h-[330px] rounded-full filter blur-[90px] mix-blend-screen ${
           theme === 'light' ? 'bg-[#3b82f6]/[0.05]' : 'bg-[#10b981]/[0.1]'
         }`} />
       </div>
 
-      {/* Ambient background accent */}
-      <div className={`absolute top-[10%] left-[20%] w-96 h-96 opacity-2 blur-3xl rounded-full pointer-events-none ${
+      {/* Brilho ambiente de fundo */}
+      <div className={`absolute top-[10%] left-[20%] w-96 h-96 opacity-5 blur-3xl rounded-full pointer-events-none ${
         theme === 'light' ? 'bg-[#000000]' : 'bg-white'
       }`} />
 
-      {/* Main app display (without phone borders, frames or code explorer) */}
+      {/* Display principal do app (focado na proporção mobile limpa) */}
       <div className="flex-1 w-full max-w-md mx-auto flex flex-col relative z-10 min-h-screen">
         <AnimatePresence mode="wait">
           {!authorized ? (
