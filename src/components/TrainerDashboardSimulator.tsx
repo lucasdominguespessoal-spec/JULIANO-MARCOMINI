@@ -4,8 +4,9 @@ import { Athlete } from '../types';
 import { 
   TrendingUp, Users, Radio, ShieldAlert, Sparkles, Activity, Plus, Save, 
   Send, Calendar, Clock, Sliders, CheckSquare, Trash2, Edit3, Award, Grid,
-  Palette, User, LogOut, FileText
+  Palette, User, LogOut, FileText, Cloud, Database
 } from 'lucide-react';
+import { supabase, saveStateToCloud, getStateFromCloud } from '../lib/supabase';
 
 interface TrainerDashboardSimulatorProps {
   onBackToRunner: () => void;
@@ -95,6 +96,10 @@ export default function TrainerDashboardSimulator({
   theme = 'dark',
   setTheme
 }: TrainerDashboardSimulatorProps) {
+  // Supabase states
+  const [supabaseStatus, setSupabaseStatus] = useState<'CONNECTING' | 'SYNCED' | 'LOCAL_ONLY' | 'ERROR'>('CONNECTING');
+  const [isSyncLoading, setIsSyncLoading] = useState<boolean>(true);
+
   // Saved Trainer credential profile to keep consistent branding
   const [trainerProfile, setTrainerProfile] = useState(() => {
     const saved = localStorage.getItem('TRAINER_PROFILE_DATA');
@@ -124,6 +129,7 @@ export default function TrainerDashboardSimulator({
   const handleSaveProfile = () => {
     setTrainerProfile(editProfileForm);
     localStorage.setItem('TRAINER_PROFILE_DATA', JSON.stringify(editProfileForm));
+    saveStateToCloud('TRAINER_PROFILE_DATA', editProfileForm);
     setIsProfileModalOpen(false);
   };
 
@@ -200,58 +206,67 @@ Gerado eletronicamente via Livelink Simulator.
 
   // Configured initial athletes with raw telemetry waves 
   // Including Lucas Domingues connected to localStorage active progression!
-  const [athletes, setAthletes] = useState<Athlete[]>([
-    {
-      id: 'lucas',
-      name: 'Lucas Domingues',
-      avatarSeed: 'L',
-      targetPace: '04:30',
-      currentPace: '04:31',
-      distanceKm: 12.15,
-      heartRate: 154,
-      cadence: 180,
-      status: 'active',
-      telemetryStream: [42, 45, 48, 43, 40, 42, 44, 46, 45, 43, 41, 44]
-    },
-    {
-      id: '1',
-      name: 'Gustavo Henrique (Alfa)',
-      avatarSeed: 'G',
-      targetPace: '04:10',
-      currentPace: '04:08',
-      distanceKm: 14.82,
-      heartRate: 162,
-      cadence: 182,
-      status: 'active',
-      telemetryStream: [30, 45, 25, 60, 40, 75, 45, 50, 40, 85, 30, 50]
-    },
-    {
-      id: '2',
-      name: 'Mariana Costa (Beta)',
-      avatarSeed: 'M',
-      targetPace: '04:25',
-      currentPace: '04:28',
-      distanceKm: 9.34,
-      heartRate: 151,
-      cadence: 176,
-      status: 'active',
-      telemetryStream: [50, 40, 45, 30, 55, 65, 40, 60, 45, 52, 58, 62]
-    },
-    {
-      id: '4',
-      name: 'Paula Albuquerque (Delta)',
-      avatarSeed: 'P',
-      targetPace: '05:00',
-      currentPace: '05:03',
-      distanceKm: 6.2,
-      heartRate: 138,
-      cadence: 168,
-      status: 'idle',
-      telemetryStream: [20, 20, 20, 20, 20, 20, 18, 22, 20, 20, 20, 20]
+  const [athletes, setAthletes] = useState<Athlete[]>(() => {
+    const isCleanStart = localStorage.getItem('IS_SYSTEM_CLEAN_START_TRUE') === 'true';
+    if (isCleanStart) {
+      return [];
     }
-  ]);
+    return [
+      {
+        id: 'lucas',
+        name: 'Lucas Domingues',
+        avatarSeed: 'L',
+        targetPace: '04:30',
+        currentPace: '04:31',
+        distanceKm: 12.15,
+        heartRate: 154,
+        cadence: 180,
+        status: 'active',
+        telemetryStream: [42, 45, 48, 43, 40, 42, 44, 46, 45, 43, 41, 44]
+      },
+      {
+        id: '1',
+        name: 'Gustavo Henrique (Alfa)',
+        avatarSeed: 'G',
+        targetPace: '04:10',
+        currentPace: '04:08',
+        distanceKm: 14.82,
+        heartRate: 162,
+        cadence: 182,
+        status: 'active',
+        telemetryStream: [30, 45, 25, 60, 40, 75, 45, 50, 40, 85, 30, 50]
+      },
+      {
+        id: '2',
+        name: 'Mariana Costa (Beta)',
+        avatarSeed: 'M',
+        targetPace: '04:25',
+        currentPace: '04:28',
+        distanceKm: 9.34,
+        heartRate: 151,
+        cadence: 176,
+        status: 'active',
+        telemetryStream: [50, 40, 45, 30, 55, 65, 40, 60, 45, 52, 58, 62]
+      },
+      {
+        id: '4',
+        name: 'Paula Albuquerque (Delta)',
+        avatarSeed: 'P',
+        targetPace: '05:00',
+        currentPace: '05:03',
+        distanceKm: 6.2,
+        heartRate: 138,
+        cadence: 168,
+        status: 'idle',
+        telemetryStream: [20, 20, 20, 20, 20, 20, 18, 22, 20, 20, 20, 20]
+      }
+    ];
+  });
 
-  const [selectedAthleteId, setSelectedAthleteId] = useState<string>('lucas');
+  const [selectedAthleteId, setSelectedAthleteId] = useState<string>(() => {
+    const isCleanStart = localStorage.getItem('IS_SYSTEM_CLEAN_START_TRUE') === 'true';
+    return isCleanStart ? '' : 'lucas';
+  });
   const [criticalFilter, setCriticalFilter] = useState(false);
   const [activeTab, setActiveTab] = useState<'MONITOR' | 'PRESCREVER' | 'FEEDBACK'>('MONITOR');
 
@@ -604,9 +619,14 @@ Gerado eletronicamente via Livelink Simulator.
     return [];
   };
 
-  // Fetch real-time states checklist dynamic data
-  const updateRealAdherence = () => {
-    const savedStates = localStorage.getItem('LUCAS_WORKOUT_STATES');
+  // Fetch real-time states checklist dynamic data from Supabase or Fallback Local
+  const updateRealAdherence = async () => {
+    const athleteKey = selectedAthleteId.toUpperCase();
+    const isLegacyLucas = athleteKey === 'LUCAS' || athleteKey === 'LUCAS_DOMINGUES' || athleteKey === 'ATLETA_B_09';
+    const statesKey = isLegacyLucas ? 'LUCAS_WORKOUT_STATES' : `LUCAS_WORKOUT_STATES_${athleteKey}`;
+    const feedbacksKey = isLegacyLucas ? 'LUCAS_ATHLETE_FEEDBACK_DICT' : `LUCAS_ATHLETE_FEEDBACK_DICT_${athleteKey}`;
+
+    const savedStates = localStorage.getItem(statesKey);
     if (savedStates) {
       try {
         const parsed = JSON.parse(savedStates);
@@ -627,26 +647,151 @@ Gerado eletronicamente via Livelink Simulator.
         const pct = totalCount > 0 ? Math.round((checkedCount / totalCount) * 100) : 60;
         setAthleteAdherence(prev => ({
           ...prev,
-          lucas: pct
+          [selectedAthleteId]: pct
         }));
       } catch (e) {}
+    } else {
+      setLucasWorkoutStates({
+        SEG: { warmup: 'PENDENTE', mainSet: 'PENDENTE', coolDown: 'PENDENTE' },
+        TER: { warmup: 'PENDENTE', mainSet: 'PENDENTE', coolDown: 'PENDENTE' },
+        QUA: { warmup: 'PENDENTE', mainSet: 'PENDENTE', coolDown: 'PENDENTE' },
+        QUI: { warmup: 'PENDENTE', mainSet: 'PENDENTE', coolDown: 'PENDENTE' },
+        SEX: { warmup: 'PENDENTE', mainSet: 'PENDENTE', coolDown: 'PENDENTE' },
+        SAB: { warmup: 'PENDENTE', mainSet: 'PENDENTE', coolDown: 'PENDENTE' },
+        DOM: { warmup: 'PENDENTE', mainSet: 'PENDENTE', coolDown: 'PENDENTE' }
+      });
     }
 
-    const savedFeedbacks = localStorage.getItem('LUCAS_ATHLETE_FEEDBACK_DICT');
+    const savedFeedbacks = localStorage.getItem(feedbacksKey);
     if (savedFeedbacks) {
       try {
         const parsed = JSON.parse(savedFeedbacks);
         setLucasFeedbacks(parsed);
       } catch (e) {}
+    } else {
+      setLucasFeedbacks({});
     }
   };
+
+  // Initial Sync load from cloud
+  useEffect(() => {
+    async function loadCloudTrainerData() {
+      setIsSyncLoading(true);
+      setSupabaseStatus('CONNECTING');
+
+      try {
+        // Query users registered dynamically on Supabase to append onto the coach athlete student pool!
+        const resUsersList = await getStateFromCloud<any[]>('APP_USERS', []);
+        if (resUsersList.data && resUsersList.data.length > 0) {
+          const registeredAthletes = resUsersList.data.filter(u => u.role === 'ATHLETE');
+          setAthletes(prev => {
+            const merged = [...prev];
+            registeredAthletes.forEach(user => {
+              const cleanedId = user.id || user.name.toLowerCase().replace(/\s+/g, '_');
+              if (!merged.some(ath => ath.id === cleanedId || ath.name.toUpperCase() === user.name.toUpperCase())) {
+                merged.push({
+                  id: cleanedId,
+                  name: user.name,
+                  avatarSeed: user.name.charAt(0).toUpperCase(),
+                  targetPace: '05:00',
+                  currentPace: '05:00',
+                  distanceKm: 0,
+                  heartRate: 140,
+                  cadence: 170,
+                  status: 'idle',
+                  telemetryStream: [20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20]
+                });
+              }
+            });
+            return merged;
+          });
+        }
+
+        const athleteKey = selectedAthleteId.toUpperCase();
+        const isLegacyLucas = athleteKey === 'LUCAS' || athleteKey === 'LUCAS_DOMINGUES' || athleteKey === 'ATLETA_B_09';
+        const planilhaKey = isLegacyLucas ? 'PLANILHA_CONFIG' : `PLANILHA_CONFIG_${athleteKey}`;
+        const statesKey = isLegacyLucas ? 'LUCAS_WORKOUT_STATES' : `LUCAS_WORKOUT_STATES_${athleteKey}`;
+        const feedbacksKey = isLegacyLucas ? 'LUCAS_ATHLETE_FEEDBACK_DICT' : `LUCAS_ATHLETE_FEEDBACK_DICT_${athleteKey}`;
+
+        const resPlanilha = await getStateFromCloud<PlanilhaData>(planilhaKey, planilhaForm);
+        
+        if (resPlanilha.error) {
+          if (resPlanilha.error.includes('relation "athlete_sync" does not exist') || resPlanilha.error.includes('not found') || resPlanilha.error.includes('não existe')) {
+            setSupabaseStatus('LOCAL_ONLY');
+          } else {
+            setSupabaseStatus('ERROR');
+          }
+          setIsSyncLoading(false);
+          return;
+        }
+
+        // Apply spreadsheet config from cloud
+        if (resPlanilha.source === 'supabase') {
+          setPlanilhaForm(resPlanilha.data);
+        }
+
+        // Apply trainer profile data
+        const resProfile = await getStateFromCloud<any>('TRAINER_PROFILE_DATA', trainerProfile);
+        if (resProfile.source === 'supabase' && resProfile.data) {
+          setTrainerProfile(resProfile.data);
+        }
+
+        // Apply workout checklist states
+        const resStates = await getStateFromCloud<any>(statesKey, null);
+        if (resStates.source === 'supabase' && resStates.data) {
+          localStorage.setItem(statesKey, JSON.stringify(resStates.data));
+        }
+
+        // Apply feedback comments
+        const resFeedbacks = await getStateFromCloud<any>(feedbacksKey, null);
+        if (resFeedbacks.source === 'supabase' && resFeedbacks.data) {
+          localStorage.setItem(feedbacksKey, JSON.stringify(resFeedbacks.data));
+        }
+
+        setSupabaseStatus('SYNCED');
+        updateRealAdherence();
+      } catch (err) {
+        setSupabaseStatus('ERROR');
+      } finally {
+        setIsSyncLoading(false);
+      }
+    }
+
+    loadCloudTrainerData();
+  }, [selectedAthleteId]);
+
+  // Poll Athlete state and feedback from cloud every 6 seconds inside Trainer Panel to keep tracker live
+  useEffect(() => {
+    if (supabaseStatus !== 'SYNCED') return;
+    const interval = setInterval(async () => {
+      const athleteKey = selectedAthleteId.toUpperCase();
+      const isLegacyLucas = athleteKey === 'LUCAS' || athleteKey === 'LUCAS_DOMINGUES' || athleteKey === 'ATLETA_B_09';
+      const statesKey = isLegacyLucas ? 'LUCAS_WORKOUT_STATES' : `LUCAS_WORKOUT_STATES_${athleteKey}`;
+      const feedbacksKey = isLegacyLucas ? 'LUCAS_ATHLETE_FEEDBACK_DICT' : `LUCAS_ATHLETE_FEEDBACK_DICT_${athleteKey}`;
+
+      // Pull dynamic feedback and progression
+      const resStates = await getStateFromCloud<any>(statesKey, null);
+      if (resStates.source === 'supabase' && resStates.data) {
+        localStorage.setItem(statesKey, JSON.stringify(resStates.data));
+      }
+
+      const resFeedbacks = await getStateFromCloud<any>(feedbacksKey, null);
+      if (resFeedbacks.source === 'supabase' && resFeedbacks.data) {
+        localStorage.setItem(feedbacksKey, JSON.stringify(resFeedbacks.data));
+      }
+
+      updateRealAdherence();
+    }, 6000);
+
+    return () => clearInterval(interval);
+  }, [supabaseStatus, selectedAthleteId]);
 
   useEffect(() => {
     updateRealAdherence();
     // Also attach focusing updates to reflect changes in the storage
     window.addEventListener('focus', updateRealAdherence);
     return () => window.removeEventListener('focus', updateRealAdherence);
-  }, []);
+  }, [selectedAthleteId]);
 
   // Background physiological fluctuation drift stream
   useEffect(() => {
@@ -759,8 +904,14 @@ Gerado eletronicamente via Livelink Simulator.
         currentStep++;
       } else {
         clearInterval(interval);
+        
+        const athleteKey = selectedAthleteId.toUpperCase();
+        const isLegacyLucas = athleteKey === 'LUCAS' || athleteKey === 'LUCAS_DOMINGUES' || athleteKey === 'ATLETA_B_09';
+        const planilhaKey = isLegacyLucas ? 'PLANILHA_CONFIG' : `PLANILHA_CONFIG_${athleteKey}`;
+
         // Persist to localStorage!
-        localStorage.setItem('PLANILHA_CONFIG', JSON.stringify(planilhaForm));
+        localStorage.setItem(planilhaKey, JSON.stringify(planilhaForm));
+        saveStateToCloud(planilhaKey, planilhaForm);
         
         // Triggers storage events on active tabs
         window.dispatchEvent(new Event('focus'));
@@ -1321,24 +1472,22 @@ Gerado eletronicamente via Livelink Simulator.
               PARA ATLETAS CORREDORES
             </span>
           </div>
-          <span className={`px-2 py-0.5 rounded-full font-mono text-[7px] tracking-widest uppercase font-black transition-all ${
-            theme === 'light' 
-              ? 'bg-emerald-50 border border-emerald-300 text-emerald-600 shadow-sm' 
-              : 'bg-[#10b981]/15 border border-[#10b981]/40 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.3)]'
-          }`}>
-            LIVELINK ACTIVE
-          </span>
         </div>
 
         {/* PROFILE OPTIONS UTILITY CONTROLS BAR (Matches exactly with initial menu, toggle clear/dark adapt, and edit button) */}
         <div className="flex items-center justify-between gap-2.5 mt-0.5 font-mono">
-          <span className={`px-1.5 py-0.5 rounded text-[7px] tracking-wider uppercase font-black transition-colors ${
-            theme === 'light' 
-              ? 'bg-neutral-100 border border-neutral-200 text-neutral-800' 
-              : 'bg-neutral-950 border border-neutral-900 text-emerald-400'
-          }`}>
-            CONEXÃO ATIVA
-          </span>
+          <div className="flex items-center gap-1">
+            <span className={`px-1.5 py-0.5 rounded text-[7px] tracking-wider uppercase font-black flex items-center gap-1 transition-colors ${
+              supabaseStatus === 'SYNCED' 
+                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' 
+                : supabaseStatus === 'LOCAL_ONLY'
+                ? 'bg-sky-500/10 text-sky-450 border border-sky-500/30'
+                : 'bg-amber-500/10 text-amber-500 border border-amber-500/30'
+            }`}>
+              <Cloud className="w-2.5 h-2.5" />
+              {supabaseStatus === 'SYNCED' ? 'SUPABASE: OK' : supabaseStatus === 'LOCAL_ONLY' ? 'SUPABASE: LOCAL' : 'SUPABASE: SINCRONIZANDO'}
+            </span>
+          </div>
 
           <div className="flex items-center gap-1.5">
             {/* Palette button (theme toggle) */}
@@ -1383,49 +1532,51 @@ Gerado eletronicamente via Livelink Simulator.
         </div>
 
         {/* Dynamic Workspace tab controllers */}
-        <div className={`grid grid-cols-3 p-1 rounded-xl transition-all ${
-          theme === 'light' ? 'bg-neutral-950/5 border border-neutral-950/10' : 'bg-white/5 border border-white/5 shadow-inner'
-        }`}>
-          <button
-            onClick={() => setActiveTab('MONITOR')}
-            className={`py-2 px-1 font-mono font-bold text-[8.5px] tracking-widest rounded-lg transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${
-              activeTab === 'MONITOR' 
-                ? 'bg-emerald-500 text-black font-black shadow-md' 
-                : `${theme === 'light' ? 'text-neutral-700 hover:text-neutral-950 hover:bg-neutral-950/5' : 'text-neutral-350 hover:text-white hover:bg-white/5'}`
-            }`}
-          >
-            <Users className="w-3.5 h-3.5 animate-pulse" />
-            ATLETAS
-          </button>
-          
-          <button
-            onClick={() => setActiveTab('PRESCREVER')}
-            className={`py-2 px-1 font-mono font-bold text-[8.5px] tracking-widest rounded-lg transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${
-              activeTab === 'PRESCREVER' 
-                ? 'bg-emerald-500 text-black font-black shadow-md' 
-                : `${theme === 'light' ? 'text-neutral-700 hover:text-neutral-950 hover:bg-neutral-950/5' : 'text-neutral-350 hover:text-white hover:bg-white/5'}`
-            }`}
-          >
-            <Sliders className="w-3.5 h-3.5" />
-            PRESCREVER
-          </button>
+        {athletes.length > 0 ? (
+          <div className={`grid grid-cols-3 p-1 rounded-xl transition-all ${
+            theme === 'light' ? 'bg-neutral-950/5 border border-neutral-950/10' : 'bg-white/5 border border-white/5 shadow-inner'
+          }`}>
+            <button
+              onClick={() => setActiveTab('MONITOR')}
+              className={`py-2 px-1 font-mono font-bold text-[8.5px] tracking-widest rounded-lg transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${
+                activeTab === 'MONITOR' 
+                  ? 'bg-emerald-500 text-black font-black shadow-md' 
+                  : `${theme === 'light' ? 'text-neutral-700 hover:text-neutral-950 hover:bg-neutral-950/5' : 'text-neutral-350 hover:text-white hover:bg-white/5'}`
+              }`}
+            >
+              <Users className="w-3.5 h-3.5 animate-pulse" />
+              ATLETAS
+            </button>
+            
+            <button
+              onClick={() => setActiveTab('PRESCREVER')}
+              className={`py-2 px-1 font-mono font-bold text-[8.5px] tracking-widest rounded-lg transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${
+                activeTab === 'PRESCREVER' 
+                  ? 'bg-emerald-500 text-black font-black shadow-md' 
+                  : `${theme === 'light' ? 'text-neutral-700 hover:text-neutral-950 hover:bg-neutral-950/5' : 'text-neutral-350 hover:text-white hover:bg-white/5'}`
+              }`}
+            >
+              <Sliders className="w-3.5 h-3.5" />
+              PRESCREVER
+            </button>
 
-          <button
-            onClick={() => setActiveTab('FEEDBACK')}
-            className={`py-2 px-1 font-mono font-bold text-[8.5px] tracking-widest rounded-lg transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${
-              activeTab === 'FEEDBACK' 
-                ? 'bg-emerald-500 text-black font-black shadow-md' 
-                : `${theme === 'light' ? 'text-neutral-700 hover:text-neutral-950 hover:bg-neutral-950/5' : 'text-neutral-350 hover:text-white hover:bg-white/5'}`
-            }`}
-          >
-            <Activity className="w-3.5 h-3.5" />
-            FEEDBACKS
-          </button>
-        </div>
+            <button
+              onClick={() => setActiveTab('FEEDBACK')}
+              className={`py-2 px-1 font-mono font-bold text-[8.5px] tracking-widest rounded-lg transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${
+                activeTab === 'FEEDBACK' 
+                  ? 'bg-emerald-500 text-black font-black shadow-md' 
+                  : `${theme === 'light' ? 'text-neutral-700 hover:text-neutral-950 hover:bg-neutral-950/5' : 'text-neutral-350 hover:text-white hover:bg-white/5'}`
+              }`}
+            >
+              <Activity className="w-3.5 h-3.5" />
+              FEEDBACKS
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {/* TAB 1: RUNNERS METRICS & SELECTION INDEX */}
-      {activeTab === 'MONITOR' && (
+      {activeTab === 'MONITOR' && athletes.length > 0 && (
         <div className="flex-grow flex flex-col gap-4 mt-4" id="monitor-content-area">
           <div className={`flex justify-between items-center text-[8.5px] font-mono tracking-widest uppercase ${
             theme === 'light' ? 'text-neutral-600' : 'text-neutral-500'
@@ -1477,7 +1628,7 @@ Gerado eletronicamente via Livelink Simulator.
       )}
 
       {/* TAB 2: STRUCTURAL TRAINING PRESCRIPTION ENGINE */}
-      {activeTab === 'PRESCREVER' && (
+      {activeTab === 'PRESCREVER' && athletes.length > 0 && (
         <div className="flex-grow flex flex-col gap-4 mt-4" id="prescribir-content-area">
           
           {/* Athlete Profile Summary configuration indicators */}
@@ -1767,7 +1918,7 @@ Gerado eletronicamente via Livelink Simulator.
       )}
 
       {/* TAB 3: WORKOUT REGISTRATION FEEDBACKS */}
-      {activeTab === 'FEEDBACK' && (
+      {activeTab === 'FEEDBACK' && athletes.length > 0 && (
         <div className="flex-1 flex flex-col gap-4 mt-4 animate-fade-in" id="feedback-content-area">
           <div className={`text-[8.5px] font-mono tracking-widest uppercase flex justify-between ${
             theme === 'light' ? 'text-neutral-600' : 'text-neutral-500'
@@ -1985,19 +2136,78 @@ Gerado eletronicamente via Livelink Simulator.
         </div>
       )}
 
-      {/* FOOTER SYSTEM DETAILS COMPONENT */}
-      <div 
-        className={`mt-6 border-t pt-4 flex justify-between items-center text-[8px] font-mono tracking-widest ${
-          theme === 'light' ? 'border-neutral-200 text-neutral-500' : 'border-neutral-900 text-neutral-600'
-        }`}
-        id="trainer-footer-status"
-      >
-        <div className="flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_5px_rgba(16,185,129,0.8)]" />
-          <span>SINAL ESTÁVEL TELE_NET</span>
+      {athletes.length === 0 && (
+        <div 
+          className={`mt-4 p-6 rounded-2xl border text-center relative overflow-hidden transition-all duration-300 ${
+            theme === 'light' 
+              ? 'liquid-glass-light border-neutral-200 text-neutral-900 shadow-md' 
+              : 'liquid-glass border-neutral-900 text-white shadow-2xl'
+          }`}
+          id="trainer-empty-state-guide"
+        >
+          {/* Decorative Sparkles */}
+          <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <Sparkles className="w-6 h-6 animate-pulse" />
+          </div>
+
+          <h2 className="text-xs font-black font-mono tracking-widest uppercase mb-2 text-emerald-400">
+            🚀 SISTEMA PRONTO & TOTALMENTE LIMPO!
+          </h2>
+          
+          <p className={`text-[10px] leading-relaxed mb-5 max-w-sm mx-auto ${
+            theme === 'light' ? 'text-neutral-600' : 'text-neutral-400'
+          }`}>
+            Você apagou com sucesso toda a base de testes simulada. O aplicativo está 100% livre de dados fictícios e pronto para iniciar o uso real com seus alunos de corrida de rua, TAF ou assessoria esportiva.
+          </p>
+
+          <div className={`text-left border rounded-xl p-4 space-y-3.5 mb-5 ${
+            theme === 'light' ? 'bg-neutral-50/50 border-neutral-150' : 'bg-black/40 border-neutral-900'
+          }`}>
+            <span className="text-[9px] font-bold font-mono tracking-wider text-emerald-400 uppercase block">
+              COMO CONECTAR OS SEUS ALUNOS REAL-TIME:
+            </span>
+
+            <div className="flex gap-2.5 items-start">
+              <span className="w-4 h-4 rounded-full bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-[9px] font-mono font-bold text-emerald-400 shrink-0 mt-0.5">1</span>
+              <div>
+                <strong className="text-[10px] block font-bold">Compartilhe o Aplicativo</strong>
+                <p className="text-[9px] text-neutral-500 leading-normal">
+                  Abra o aplicativo em outro dispositivo ou envie o link do aplicativo para seus respectivos alunos.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-2.5 items-start">
+              <span className="w-4 h-4 rounded-full bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-[9px] font-mono font-bold text-emerald-400 shrink-0 mt-0.5">2</span>
+              <div>
+                <strong className="text-[10px] block font-bold">Criação de Conta Gratuita</strong>
+                <p className="text-[9px] text-neutral-500 leading-normal">
+                  Seus alunos devem acessar a opção <span className="font-bold underline text-neutral-400">Criar Perfil</span> no menu de início, selecionando a categoria <span className="text-emerald-500 font-bold">ATLETA</span> e informando Celular e Senha própria.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-2.5 items-start">
+              <span className="w-4 h-4 rounded-full bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-[9px] font-mono font-bold text-emerald-400 shrink-0 mt-0.5">3</span>
+              <div>
+                <strong className="text-[10px] block font-bold">Sincronização Automática Real-Time</strong>
+                <p className="text-[9px] text-neutral-500 leading-normal">
+                  Pronto! No momento em que o aluno se registrar, o nome dele aparecerá instantaneamente no seu painel. Você poderá prescrever planilhas esportivas e colher feedbacks em tempo real de forma sincronizada.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-center gap-2">
+            <button
+              onClick={onBackToRunner}
+              className="py-2.5 px-4 rounded-xl text-[9px] font-mono font-bold tracking-widest bg-emerald-500 hover:bg-emerald-600 text-black cursor-pointer uppercase transition-all duration-300"
+            >
+              Ir para Tela de início
+            </button>
+          </div>
         </div>
-        <span>FREQUÊNCIA DE BROADCAST [LOCAL]</span>
-      </div>
+      )}
 
     </div>
   );

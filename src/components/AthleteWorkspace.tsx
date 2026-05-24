@@ -22,8 +22,15 @@ import {
   Flame,
   List,
   Calendar,
-  Info
+  Info,
+  Cloud,
+  Database,
+  AlertTriangle,
+  Check,
+  Loader2,
+  Copy
 } from 'lucide-react';
+import { supabase, saveStateToCloud, getStateFromCloud, SUPABASE_BOOTSTRAP_SQL } from '../lib/supabase';
 
 interface AthleteWorkspaceProps {
   athleteName: string;
@@ -120,9 +127,26 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
   const [isStatsOpen, setIsStatsOpen] = useState<boolean>(false);
   const [selectedWeek, setSelectedWeek] = useState<string>('Semana 15');
 
+  // Supabase Cloud Sincronização States
+  const [supabaseStatus, setSupabaseStatus] = useState<'CONNECTING' | 'SYNCED' | 'LOCAL_ONLY' | 'ERROR'>('CONNECTING');
+  const [supabaseError, setSupabaseError] = useState<string | null>(null);
+  const [showSqlDialog, setShowSqlDialog] = useState<boolean>(false);
+  const [isSyncLoading, setIsSyncLoading] = useState<boolean>(true);
+  const [copiedSql, setCopiedSql] = useState<boolean>(false);
+
+  // SANITIZED USER-SPECIFIC KEYS FOR SEGREGATED PERSISTENCE
+  const athleteKeyRaw = athleteName.toUpperCase().replace(/\s+/g, '_');
+  const isLegacyLucas = athleteKeyRaw === 'LUCAS' || athleteKeyRaw === 'LUCAS_DOMINGUES' || athleteKeyRaw === 'ATLETA_B_09';
+  const athleteKey = isLegacyLucas ? 'LUCAS' : athleteKeyRaw;
+
+  const planilhaKey = isLegacyLucas ? 'PLANILHA_CONFIG' : `PLANILHA_CONFIG_${athleteKey}`;
+  const statesKey = isLegacyLucas ? 'LUCAS_WORKOUT_STATES' : `LUCAS_WORKOUT_STATES_${athleteKey}`;
+  const feedbacksKey = isLegacyLucas ? 'LUCAS_ATHLETE_FEEDBACK_DICT' : `LUCAS_ATHLETE_FEEDBACK_DICT_${athleteKey}`;
+  const logsKey = isLegacyLucas ? 'LUCAS_ACTIVITY_LOGS' : `LUCAS_ACTIVITY_LOGS_${athleteKey}`;
+
   // Dynamic planilha data synced directly with the Trainer Workspace config
   const [planilha, setPlanilha] = useState<PlanilhaData>(() => {
-    const saved = localStorage.getItem('PLANILHA_CONFIG');
+    const saved = localStorage.getItem(planilhaKey);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -132,7 +156,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
       } catch (e) {}
     }
     return {
-      athleteName: "LUCAS DOMINGUES",
+      athleteName: athleteName.toUpperCase(),
       modalidade: "corrida de rua",
       semanaTreinamento: "18/05 - 24/05",
       objetivo: "TAF 12 minutos",
@@ -142,6 +166,73 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
       prescriptions: DEFAULT_PRESCRIPTIONS
     };
   });
+
+  // Initial loading from Supabase Cloud
+  useEffect(() => {
+    async function initSupabaseSync() {
+      setIsSyncLoading(true);
+      setSupabaseStatus('CONNECTING');
+
+      try {
+        // Try fetching current athlete custom config
+        const resPlanilha = await getStateFromCloud<PlanilhaData>(planilhaKey, planilha);
+        
+        if (resPlanilha.error) {
+          if (resPlanilha.error.includes('relation "athlete_sync" does not exist') || resPlanilha.error.includes('not found') || resPlanilha.error.includes('não existe')) {
+            setSupabaseStatus('LOCAL_ONLY');
+            setSupabaseError('Tabela athlete_sync não encontrada no Supabase.');
+          } else {
+            setSupabaseStatus('ERROR');
+            setSupabaseError(resPlanilha.error);
+          }
+          setIsSyncLoading(false);
+          return;
+        }
+
+        // Successfully synchronized! Load other structures
+        if (resPlanilha.source === 'supabase') {
+          setPlanilha(resPlanilha.data);
+        }
+
+        const resStates = await getStateFromCloud<Record<string, Record<string, WorkoutStatus>>>(statesKey, workoutStates);
+        if (resStates.source === 'supabase' && resStates.data) {
+          setWorkoutStates(resStates.data);
+        }
+
+        const resFeedbacks = await getStateFromCloud<any>(feedbacksKey, feedbacks);
+        if (resFeedbacks.source === 'supabase' && resFeedbacks.data) {
+          setFeedbacks(resFeedbacks.data);
+        }
+
+        const resLogs = await getStateFromCloud<StoredRunActivity[]>(logsKey, activityLogs);
+        if (resLogs.source === 'supabase' && resLogs.data) {
+          setActivityLogs(resLogs.data);
+        }
+
+        setSupabaseStatus('SYNCED');
+        setSupabaseError(null);
+      } catch (err: any) {
+        setSupabaseStatus('ERROR');
+        setSupabaseError(err.message || 'Falha de rede.');
+      } finally {
+        setIsSyncLoading(false);
+      }
+    }
+
+    initSupabaseSync();
+  }, []);
+
+  // Poll for updates from trainer every 6 seconds to keep it live
+  useEffect(() => {
+    if (supabaseStatus !== 'SYNCED') return;
+    const interval = setInterval(async () => {
+      const resPlanilha = await getStateFromCloud<PlanilhaData>(planilhaKey, planilha);
+      if (resPlanilha.source === 'supabase' && JSON.stringify(resPlanilha.data) !== JSON.stringify(planilha)) {
+        setPlanilha(resPlanilha.data);
+      }
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [supabaseStatus, planilha, planilhaKey]);
 
   // Track week from spreadsheet data if updated by coach
   useEffect(() => {
@@ -153,7 +244,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
   // Read updated values from localStorage whenever the tab becomes active or on visibility change
   useEffect(() => {
     const handleFocus = () => {
-      const saved = localStorage.getItem('PLANILHA_CONFIG');
+      const saved = localStorage.getItem(planilhaKey);
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
@@ -165,7 +256,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
     };
     window.addEventListener('focus', handleFocus);
     return () => window.removeEventListener('focus', handleFocus);
-  }, []);
+  }, [planilhaKey]);
 
   // Custom View Mode: Daily Card vs Weekly Overview Layout
   const [viewMode, setViewMode] = useState<'DIARIO' | 'SEMANAL'>('DIARIO');
@@ -183,7 +274,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
   }
 
   const [activityLogs, setActivityLogs] = useState<StoredRunActivity[]>(() => {
-    const saved = localStorage.getItem('LUCAS_ACTIVITY_LOGS');
+    const saved = localStorage.getItem(logsKey);
     if (saved) {
       try { return JSON.parse(saved); } catch (e) {}
     }
@@ -194,8 +285,11 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
   });
 
   useEffect(() => {
-    localStorage.setItem('LUCAS_ACTIVITY_LOGS', JSON.stringify(activityLogs));
-  }, [activityLogs]);
+    localStorage.setItem(logsKey, JSON.stringify(activityLogs));
+    if (!isSyncLoading && (supabaseStatus === 'SYNCED' || supabaseStatus === 'LOCAL_ONLY')) {
+      saveStateToCloud(logsKey, activityLogs);
+    }
+  }, [activityLogs, isSyncLoading, supabaseStatus, logsKey]);
 
   // GPS Sim Tracker states
   const [isGpsActive, setIsGpsActive] = useState(false);
@@ -229,7 +323,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
 
   // Reactive workout state manager with direct local updates
   const [workoutStates, setWorkoutStates] = useState<Record<string, Record<string, WorkoutStatus>>>(() => {
-    const saved = localStorage.getItem('LUCAS_WORKOUT_STATES');
+    const saved = localStorage.getItem(statesKey);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -253,12 +347,15 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
 
   // Persist workout completion check states
   useEffect(() => {
-    localStorage.setItem('LUCAS_WORKOUT_STATES', JSON.stringify(workoutStates));
-  }, [workoutStates]);
+    localStorage.setItem(statesKey, JSON.stringify(workoutStates));
+    if (!isSyncLoading && (supabaseStatus === 'SYNCED' || supabaseStatus === 'LOCAL_ONLY')) {
+      saveStateToCloud(statesKey, workoutStates);
+    }
+  }, [workoutStates, isSyncLoading, supabaseStatus, statesKey]);
 
   // Subjective student training feedbacks per day
   const [feedbacks, setFeedbacks] = useState<Record<string, { comment: string; effort: number; feeling: string; pain?: number; sleep?: number; energy?: number }>>(() => {
-    const saved = localStorage.getItem('LUCAS_ATHLETE_FEEDBACK_DICT');
+    const saved = localStorage.getItem(feedbacksKey);
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -307,7 +404,11 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
           energy: currentEnergy
         }
       };
-      localStorage.setItem('LUCAS_ATHLETE_FEEDBACK_DICT', JSON.stringify(updated));
+      localStorage.setItem(feedbacksKey, JSON.stringify(updated));
+      
+      if (!isSyncLoading && (supabaseStatus === 'SYNCED' || supabaseStatus === 'LOCAL_ONLY')) {
+        saveStateToCloud(feedbacksKey, updated);
+      }
       
       // Force trigger window level update so trainer session picks it up
       window.dispatchEvent(new Event('focus'));
@@ -532,6 +633,52 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
           </button>
         </div>
 
+      </div>
+
+      {/* CLOUD SYNC BAR */}
+      <div className="w-full max-w-sm mt-3 z-10 px-1" id="supabase-cloud-sync-bar">
+        <div className={`p-2 rounded-xl border flex items-center justify-between text-[9px] font-mono transition-all ${
+          supabaseStatus === 'SYNCED' 
+            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500' 
+            : supabaseStatus === 'CONNECTING'
+            ? 'bg-amber-500/10 border-amber-500/30 text-amber-500'
+            : supabaseStatus === 'LOCAL_ONLY'
+            ? 'bg-sky-500/10 border-sky-500/30 text-sky-400 shadow-sm'
+            : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
+        }`}>
+          <div className="flex items-center gap-1.5">
+            <Cloud className={`w-3.5 h-3.5 ${supabaseStatus === 'CONNECTING' ? 'animate-pulse' : ''}`} />
+            <div>
+              <span className="font-bold uppercase tracking-wider">SUPABASE CLOUD: </span>
+              <span className="font-medium">
+                {supabaseStatus === 'SYNCED' && 'Sincronizado'}
+                {supabaseStatus === 'CONNECTING' && 'Conectando à Nuvem...'}
+                {supabaseStatus === 'LOCAL_ONLY' && 'Banco Local (Sincronização pendente)'}
+                {supabaseStatus === 'ERROR' && `Erro de Configuração`}
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {supabaseStatus === 'LOCAL_ONLY' && (
+              <button 
+                onClick={() => setShowSqlDialog(true)}
+                className="px-2 py-0.5 rounded bg-[#0284c7] text-[#fff] hover:bg-sky-600 hover:text-white text-[8px] font-black uppercase tracking-widest cursor-pointer transition-all active:scale-95 z-20"
+                id="btn-active-supabase-cloud"
+              >
+                Configurar SQL
+              </button>
+            )}
+            {supabaseStatus === 'ERROR' && (
+              <span className="text-[8px] opacity-75 underline cursor-pointer" title={supabaseError || undefined}>Ver Erro</span>
+            )}
+            {supabaseStatus === 'SYNCED' && (
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+              </span>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* 3. PRIMARY VIEW SWITCH TABS (TREINOS // PERFIL) */}
@@ -1914,16 +2061,103 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
         )}
       </AnimatePresence>
 
-      {/* 10. SYSTEM STATUS FOOTER */}
-      <div 
-        className="w-full flex justify-center items-center gap-1.5 py-4 z-10 select-none mt-2"
-        id="applet-connection-footer"
-      >
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_#10b981]" />
-        <span className="text-[7.5px] font-mono tracking-[0.28em] text-neutral-500 uppercase">
-          SISTEMA ATIVO // ARMAZENAMENTO CRIPTOGRAFADO LOCAL
-        </span>
-      </div>
+      {/* SUPABASE SQL BOOTSTRAP OVERLAY */}
+      <AnimatePresence>
+        {showSqlDialog && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className={`w-full max-w-md border rounded-2xl p-5 font-mono text-[10px] shadow-2xl relative flex flex-col gap-4 ${
+                theme === 'light' ? 'bg-[#f5f5f7] border-neutral-300 text-[#19191b]' : 'bg-[#0a0a0c] border-neutral-900 text-neutral-300'
+              }`}
+            >
+              <button 
+                onClick={() => setShowSqlDialog(false)}
+                className="absolute top-4 right-4 p-1 hover:text-red-500 transition-colors cursor-pointer"
+                title="Fechar"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="flex items-center gap-2 border-b border-neutral-800/10 dark:border-neutral-800 pb-3">
+                <Database className="w-5 h-5 text-[#0284c7]" />
+                <div>
+                  <h3 className={`text-xs font-black tracking-widest uppercase ${theme === 'light' ? 'text-black' : 'text-white'}`}>Configurar Supabase Cloud</h3>
+                  <p className="text-[8px] text-neutral-500 font-bold uppercase mt-0.5">Siga as instruções para ativar sincronização bi-direcional</p>
+                </div>
+              </div>
+
+              <p className="leading-relaxed text-[9px]">
+                O seu aplicativo do atleta e painel do treinador já estão vinculados à API do Supabase (<span className="text-sky-500 font-bold">{(import.meta as any).env?.VITE_SUPABASE_URL?.replace('https://', '').split('.')[0] || 'kgmnvjhyuhpxglpsvpnz'}</span>).
+              </p>
+              
+              <div className="bg-sky-500/10 border border-sky-500/25 rounded-xl p-3 flex gap-2 text-sky-500 text-[9px]">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-sky-400" />
+                <p className="leading-relaxed font-semibold">
+                  A tabela <code className="bg-sky-950/40 border border-sky-900 px-1 py-0.5 rounded text-white text-[8px]">athlete_sync</code> está ausente ou ainda não foi criada. Copie o script SQL abaixo, acesse o painel de controle do Supabase, cole no <strong className={theme === 'light' ? 'text-[#19191b]' : 'text-white'}>SQL Editor</strong> do projeto e clique em <strong className={theme === 'light' ? 'text-[#19191b]' : 'text-white'}>Run</strong>.
+                </p>
+              </div>
+
+              <div className="space-y-1.5 flex flex-col flex-1">
+                <div className="flex justify-between items-center">
+                  <span className="text-[8px] text-neutral-450 tracking-wider font-bold uppercase">SCRIPT DE CRIAÇÃO (DQL / DDL):</span>
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(SUPABASE_BOOTSTRAP_SQL);
+                      setCopiedSql(true);
+                      setTimeout(() => setCopiedSql(false), 2000);
+                    }}
+                    className="flex items-center gap-1.5 px-2 py-1 rounded bg-[#10b981] hover:bg-emerald-400 text-[8px] font-black text-[#000] uppercase tracking-wider cursor-pointer transition"
+                  >
+                    {copiedSql ? (
+                      <>
+                        <Check className="w-2.5 h-2.5" />
+                        Copiado!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-2.5 h-2.5" />
+                        Copiar Script SQL
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <pre className="p-3 bg-neutral-950 border border-neutral-900 rounded-xl overflow-x-auto text-[8px] text-[#10b981] font-mono leading-relaxed max-h-48 whitespace-pre">
+                  {SUPABASE_BOOTSTRAP_SQL}
+                </pre>
+              </div>
+
+              <div className="border-t border-neutral-800/10 dark:border-neutral-900 pt-3 flex justify-end gap-2 text-[9px] uppercase font-bold tracking-widest mt-1">
+                <button 
+                  onClick={() => setShowSqlDialog(false)}
+                  className="px-4 py-2 bg-neutral-900 hover:bg-neutral-850 text-neutral-300 rounded-lg cursor-pointer"
+                >
+                  Continuar Local
+                </button>
+                <button 
+                  onClick={() => {
+                    setShowSqlDialog(false);
+                    window.location.reload();
+                  }}
+                  className={`px-4 py-2 rounded-lg cursor-pointer flex items-center gap-1 text-[8.5px] font-black uppercase tracking-wider transition ${
+                    theme === 'light' ? 'bg-neutral-950 text-white hover:bg-neutral-800' : 'bg-white text-black hover:bg-neutral-250'
+                  }`}
+                >
+                  Confirmar e Recarregar ✓
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

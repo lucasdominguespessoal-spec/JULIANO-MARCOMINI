@@ -8,11 +8,51 @@
 }
 
 /* Custom Experimental Styles - OLED Dark */
+html, body {
+  position: relative;
+  overflow-x: hidden;
+  max-width: 100%;
+  width: 100vw;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  -webkit-text-size-adjust: 100%;
+  -moz-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overscroll-behavior-x: none;
+  scroll-behavior: smooth;
+  height: 100%;
+}
+
+/* Stable height reference on iOS browsers to stop viewport jumps when dynamic navigation bars collapse/expand on tab changes */
+@supports (height: 100dvh) {
+  html, body {
+    height: 100dvh;
+    min-height: 100dvh;
+  }
+}
+
 body {
   background-color: #000000;
   color: #ffffff;
-  overflow-x: hidden;
+  overflow-y: auto;
   font-family: var(--font-sans);
+}
+
+/* Disable automated document scroll anchors so dynamic tabs swapping won't force the page to jump or snap layout bounds */
+#main-scrolling-content-container,
+#app-workspace-root {
+  overflow-anchor: none;
+}
+
+/* Force standard font size of 16px minimum for form controls on smaller screens to entirely bypass the Safari/Chrome auto-zoom on input focus */
+@media screen and (max-width: 768px) {
+  input, 
+  select, 
+  textarea, 
+  [contenteditable="true"] {
+    font-size: 16px !important;
+  }
 }
 
 /* Custom Asphalt Friction Texture */

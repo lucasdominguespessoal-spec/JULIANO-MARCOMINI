@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Fingerprint, UserPlus, Phone, Lock, User, Check } from 'lucide-react';
+import { Fingerprint, UserPlus, Phone, Lock, User, Check, Sun, Moon, Palette } from 'lucide-react';
+import { getStateFromCloud, saveStateToCloud } from '../lib/supabase';
 
 interface OnboardingSimulatorProps {
   onLoginSuccess: (athleteCode: string) => void;
@@ -34,6 +35,38 @@ export default function OnboardingSimulator({ onLoginSuccess, theme = 'dark', se
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [shakeTrigger, setShakeTrigger] = useState(false);
 
+  // Loaded system accounts list state
+  const [usersList, setUsersList] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadUsers() {
+      // Force clean start default initially - Wipes all testing data silently programmatically
+      const isCleanStartSet = localStorage.getItem('IS_SYSTEM_CLEAN_START_TRUE');
+      if (isCleanStartSet !== 'true') {
+        localStorage.setItem('IS_SYSTEM_CLEAN_START_TRUE', 'true');
+        const pristineUsers = [
+          { id: 'treinador', name: 'TREINADOR', phone: '0', password: '1234', role: 'COACH' }
+        ];
+        localStorage.setItem('APP_USERS', JSON.stringify(pristineUsers));
+        try {
+          saveStateToCloud('APP_USERS', pristineUsers);
+          saveStateToCloud('IS_SYSTEM_CLEAN_START_TRUE', true);
+          saveStateToCloud('PLANILHA_CONFIG', null);
+          saveStateToCloud('LUCAS_WORKOUT_STATES', null);
+          saveStateToCloud('LUCAS_ATHLETE_FEEDBACK_DICT', null);
+          saveStateToCloud('LUCAS_ACTIVITY_LOGS', null);
+        } catch (_) {}
+      }
+
+      const defaultUsers = [
+        { id: 'treinador', name: 'TREINADOR', phone: '0', password: '1234', role: 'COACH' }
+      ];
+      const res = await getStateFromCloud<any[]>('APP_USERS', defaultUsers);
+      setUsersList(res.data || defaultUsers);
+    }
+    loadUsers();
+  }, []);
+
   // Clear states when user changes active index profile
   useEffect(() => {
     setFormError('');
@@ -58,13 +91,34 @@ export default function OnboardingSimulator({ onLoginSuccess, theme = 'dark', se
               setIsSubmitting(true);
               
               // Simulate database encryption check
-              setTimeout(() => {
+              setTimeout(async () => {
                 setIsSubmitting(false);
                 if (activeIndex === 2) {
-                  onLoginSuccess(registerName.toUpperCase().trim() || 'NOVO ATLETA');
+                  const cleanName = registerName.toUpperCase().trim();
+                  const cleanPhone = registerPhone.trim();
+
+                  // Save registration to dynamic cloud users list
+                  const newUser = {
+                    id: cleanName.toLowerCase().replace(/\s+/g, '_'),
+                    name: cleanName,
+                    phone: cleanPhone,
+                    password: registerPassword,
+                    role: registerRole
+                  };
+
+                  const updatedList = [...usersList, newUser];
+                  setUsersList(updatedList);
+                  await saveStateToCloud('APP_USERS', updatedList);
+
+                  onLoginSuccess(newUser.role === 'COACH' ? 'TREINADOR' : newUser.name);
                 } else {
-                  // If trainer index 1 or athlete index 0
-                  onLoginSuccess(activeIndex === 0 ? 'ATLETA_B_09' : 'TREINADOR');
+                  // Direct login matched from system list
+                  const matched = usersList.find(u => u.phone === phoneNumber);
+                  if (matched) {
+                    onLoginSuccess(matched.role === 'COACH' ? 'TREINADOR' : matched.name);
+                  } else {
+                    onLoginSuccess(activeIndex === 0 ? 'ATLETA_B_09' : 'TREINADOR');
+                  }
                 }
               }, 800);
             }, 300);
@@ -77,7 +131,7 @@ export default function OnboardingSimulator({ onLoginSuccess, theme = 'dark', se
       setScanProgress(0);
     }
     return () => clearInterval(interval);
-  }, [isScanning, activeIndex, registerName, onLoginSuccess]);
+  }, [isScanning, activeIndex, registerName, registerPhone, registerPassword, registerRole, usersList, phoneNumber, onLoginSuccess]);
 
   const validateFields = () => {
     if (activeIndex === 2) {
@@ -96,6 +150,12 @@ export default function OnboardingSimulator({ onLoginSuccess, theme = 'dark', se
         setShakeTrigger(true);
         return false;
       }
+      const duplicate = usersList.some(u => u.phone === registerPhone);
+      if (duplicate) {
+        setFormError('TELEFONE JÁ REGISTRADO');
+        setShakeTrigger(true);
+        return false;
+      }
     } else {
       if (!phoneNumber.trim()) {
         setFormError('DIGITE SEU CELULAR');
@@ -104,6 +164,26 @@ export default function OnboardingSimulator({ onLoginSuccess, theme = 'dark', se
       }
       if (!password.trim()) {
         setFormError('DIGITE SUA SENHA');
+        setShakeTrigger(true);
+        return false;
+      }
+
+      // Check matching credentials against dynamised usersList
+      const matched = usersList.find(u => u.phone === phoneNumber);
+      if (!matched) {
+        setFormError('CELULAR NÃO REGISTRADO');
+        setShakeTrigger(true);
+        return false;
+      }
+      if (matched.password !== password) {
+        setFormError('SENHA INCORRETA');
+        setShakeTrigger(true);
+        return false;
+      }
+
+      const expectedRole = activeIndex === 0 ? 'ATHLETE' : 'COACH';
+      if (matched.role !== expectedRole) {
+        setFormError(activeIndex === 0 ? 'ESTE CADASTRO É DE TREINADOR' : 'ESTE CADASTRO É DE ATLETA');
         setShakeTrigger(true);
         return false;
       }
@@ -182,7 +262,7 @@ export default function OnboardingSimulator({ onLoginSuccess, theme = 'dark', se
       }`} />
 
       {/* Brand Header */}
-      <div className="text-center w-full z-10 pt-2 select-none">
+      <div className="text-center w-full z-10 pt-2 select-none flex flex-col items-center">
         <motion.h1 
           className={`text-2xl md:text-3xl font-extrabold tracking-[0.15em] font-display uppercase leading-tight transition-colors ${
             theme === 'light' ? 'text-neutral-900 drop-shadow-sm' : 'text-white drop-shadow-[0_0_12px_rgba(255,255,255,0.15)]'
@@ -193,6 +273,7 @@ export default function OnboardingSimulator({ onLoginSuccess, theme = 'dark', se
         >
           JULIANO MARCOMINI
         </motion.h1>
+        
         <motion.p 
           className={`text-[9px] uppercase tracking-[0.25em] font-mono mt-1.5 transition-colors ${
             theme === 'light' ? 'text-neutral-600' : 'text-neutral-400'
@@ -203,6 +284,37 @@ export default function OnboardingSimulator({ onLoginSuccess, theme = 'dark', se
         >
           PARA ATLETAS CORREDORES
         </motion.p>
+
+        {/* Cohesive, integrated theme switch badge matching sporty visual style */}
+        <motion.div 
+          className="mt-3"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          <button
+            onClick={() => setTheme && setTheme(theme === 'light' ? 'dark' : 'light')}
+            className={`px-3 py-1 rounded-full border text-[7.5px] font-mono tracking-widest uppercase flex items-center gap-1.5 transition-all duration-300 active:scale-95 cursor-pointer ${
+              theme === 'light' 
+                ? 'bg-neutral-100 hover:bg-neutral-200 border-neutral-300 text-neutral-800 hover:text-black' 
+                : 'bg-neutral-950 border-neutral-850 text-neutral-400 hover:text-emerald-400 hover:border-emerald-500/30'
+            }`}
+            id="theme-toggle-header"
+            title="Clique para alternar o esquema de cor do aplicativo"
+          >
+            {theme === 'light' ? (
+              <>
+                <Sun className="w-2.5 h-2.5 text-amber-500 animate-spin" style={{ animationDuration: '12s' }} />
+                <span>MODO CLARO</span>
+              </>
+            ) : (
+              <>
+                <Moon className="w-2.5 h-2.5 text-emerald-400 animate-pulse" />
+                <span>MODO ESCURO</span>
+              </>
+            )}
+          </button>
+        </motion.div>
       </div>
 
       {/* Central Interactive Block with inputs + biometric trigger (Unified Flow) */}

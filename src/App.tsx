@@ -28,7 +28,7 @@ export default function App() {
 
   return (
     <div 
-      className={`w-screen min-h-screen transition-colors duration-300 flex flex-col font-sans overflow-x-hidden ${
+      className={`w-full min-h-screen transition-colors duration-300 flex flex-col font-sans overflow-x-hidden ${
         theme === 'light' ? 'bg-[#f5f5f7] text-[#1c1c1e]' : 'bg-[#000000] text-white'
       }`} 
       id="app-workspace-root"
