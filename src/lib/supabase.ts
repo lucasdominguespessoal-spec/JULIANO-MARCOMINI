@@ -13,9 +13,9 @@ try {
   console.warn("Could not read import.meta.env safely on host environment:", e);
 }
 
-const rawUrl = envUrl || 'https://ejztgxzmwutphlzxqmba.supabase.co/rest/v1/';
+const rawUrl = envUrl || 'https://kgmnvjhyuhpxglpsvpnz.supabase.co/rest/v1/';
 const cleanUrl = rawUrl.replace(/\/rest\/v1\/?$/, ''); // Strip rest/v1 suffix if it exists
-const finalAnonKey = anonKey || 'sb_publishable_CXGCH-4vO45tavB2MEdPGQ_cZY9kHDG';
+const finalAnonKey = anonKey || 'sb_publishable_PETS7v3HtnOzOlobv2z3QQ_v61zppLl';
 
 // Export clean URL so other components can access it fail-safe
 export const supabaseUrl = cleanUrl;
