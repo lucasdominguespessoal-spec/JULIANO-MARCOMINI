@@ -207,14 +207,10 @@ Gerado eletronicamente via Livelink Simulator.
   // Configured initial athletes with raw telemetry waves 
   // Including Lucas Domingues connected to localStorage active progression!
   const [athletes, setAthletes] = useState<Athlete[]>(() => {
-    const isCleanStart = localStorage.getItem('IS_SYSTEM_CLEAN_START_TRUE') === 'true';
-    if (isCleanStart) {
-      return [];
-    }
     return [
       {
         id: 'lucas',
-        name: 'Lucas Domingues',
+        name: 'LUCAS DOMINGUES',
         avatarSeed: 'L',
         targetPace: '04:30',
         currentPace: '04:31',
@@ -225,8 +221,8 @@ Gerado eletronicamente via Livelink Simulator.
         telemetryStream: [42, 45, 48, 43, 40, 42, 44, 46, 45, 43, 41, 44]
       },
       {
-        id: '1',
-        name: 'Gustavo Henrique (Alfa)',
+        id: 'gustavo',
+        name: 'GUSTAVO HENRIQUE (ALFA)',
         avatarSeed: 'G',
         targetPace: '04:10',
         currentPace: '04:08',
@@ -237,8 +233,8 @@ Gerado eletronicamente via Livelink Simulator.
         telemetryStream: [30, 45, 25, 60, 40, 75, 45, 50, 40, 85, 30, 50]
       },
       {
-        id: '2',
-        name: 'Mariana Costa (Beta)',
+        id: 'mariana',
+        name: 'MARIANA COSTA (BETA)',
         avatarSeed: 'M',
         targetPace: '04:25',
         currentPace: '04:28',
@@ -249,8 +245,8 @@ Gerado eletronicamente via Livelink Simulator.
         telemetryStream: [50, 40, 45, 30, 55, 65, 40, 60, 45, 52, 58, 62]
       },
       {
-        id: '4',
-        name: 'Paula Albuquerque (Delta)',
+        id: 'paula',
+        name: 'PAULA ALBUQUERQUE (DELTA)',
         avatarSeed: 'P',
         targetPace: '05:00',
         currentPace: '05:03',
@@ -263,10 +259,7 @@ Gerado eletronicamente via Livelink Simulator.
     ];
   });
 
-  const [selectedAthleteId, setSelectedAthleteId] = useState<string>(() => {
-    const isCleanStart = localStorage.getItem('IS_SYSTEM_CLEAN_START_TRUE') === 'true';
-    return isCleanStart ? '' : 'lucas';
-  });
+  const [selectedAthleteId, setSelectedAthleteId] = useState<string>('lucas');
   const [criticalFilter, setCriticalFilter] = useState(false);
   const [activeTab, setActiveTab] = useState<'MONITOR' | 'PRESCREVER' | 'FEEDBACK'>('MONITOR');
 

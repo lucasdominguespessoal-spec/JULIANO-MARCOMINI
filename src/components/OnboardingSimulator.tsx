@@ -40,16 +40,21 @@ export default function OnboardingSimulator({ onLoginSuccess, theme = 'dark', se
 
   useEffect(() => {
     async function loadUsers() {
+      const defaultUsers = [
+        { id: 'treinador', name: 'TREINADOR', phone: '0', password: '1234', role: 'COACH' },
+        { id: 'lucas', name: 'LUCAS DOMINGUES', phone: '1', password: '1234', role: 'ATHLETE' },
+        { id: 'gustavo', name: 'GUSTAVO HENRIQUE (ALFA)', phone: '2', password: '1234', role: 'ATHLETE' },
+        { id: 'mariana', name: 'MARIANA COSTA (BETA)', phone: '3', password: '1234', role: 'ATHLETE' },
+        { id: 'paula', name: 'PAULA ALBUQUERQUE (DELTA)', phone: '4', password: '1234', role: 'ATHLETE' }
+      ];
+
       // Force clean start default initially - Wipes all testing data silently programmatically
       const isCleanStartSet = localStorage.getItem('IS_SYSTEM_CLEAN_START_TRUE');
       if (isCleanStartSet !== 'true') {
         localStorage.setItem('IS_SYSTEM_CLEAN_START_TRUE', 'true');
-        const pristineUsers = [
-          { id: 'treinador', name: 'TREINADOR', phone: '0', password: '1234', role: 'COACH' }
-        ];
-        localStorage.setItem('APP_USERS', JSON.stringify(pristineUsers));
+        localStorage.setItem('APP_USERS', JSON.stringify(defaultUsers));
         try {
-          saveStateToCloud('APP_USERS', pristineUsers);
+          saveStateToCloud('APP_USERS', defaultUsers);
           saveStateToCloud('IS_SYSTEM_CLEAN_START_TRUE', true);
           saveStateToCloud('PLANILHA_CONFIG', null);
           saveStateToCloud('LUCAS_WORKOUT_STATES', null);
@@ -58,11 +63,19 @@ export default function OnboardingSimulator({ onLoginSuccess, theme = 'dark', se
         } catch (_) {}
       }
 
-      const defaultUsers = [
-        { id: 'treinador', name: 'TREINADOR', phone: '0', password: '1234', role: 'COACH' }
-      ];
       const res = await getStateFromCloud<any[]>('APP_USERS', defaultUsers);
-      setUsersList(res.data || defaultUsers);
+      
+      // Ensure the active/default list is never emptier than our pre-registered default users
+      const mergedList = [...defaultUsers];
+      if (res.data && Array.isArray(res.data)) {
+        res.data.forEach((u: any) => {
+          if (u && u.phone && !mergedList.some(item => item.phone === u.phone)) {
+            mergedList.push(u);
+          }
+        });
+      }
+      setUsersList(mergedList);
+      localStorage.setItem('APP_USERS', JSON.stringify(mergedList));
     }
     loadUsers();
   }, []);
