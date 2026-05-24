@@ -2095,7 +2095,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
               </div>
 
               <p className="leading-relaxed text-[9px]">
-                O seu aplicativo do atleta e painel do treinador já estão vinculados à API do Supabase (<span className="text-sky-500 font-bold">{import.meta.env?.VITE_SUPABASE_URL?.replace('https://', '').split('.')[0] || 'kgmnvjhyuhpxglpsvpnz'}</span>).
+                O seu aplicativo do atleta e painel do treinador já estão vinculados à API do Supabase (<span className="text-sky-500 font-bold">{(import.meta.env?.VITE_SUPABASE_URL || 'https://kgmnvjhyuhpxglpsvpnz.supabase.co').replace('https://', '').split('.')[0]}</span>).
               </p>
               
               <div className="bg-sky-500/10 border border-sky-500/25 rounded-xl p-3 flex gap-2 text-sky-500 text-[9px]">
