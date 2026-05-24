@@ -1,0 +1,165 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;700&family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Custom Experimental Styles - OLED Dark */
+body {
+  background-color: #000000;
+  color: #ffffff;
+  overflow-x: hidden;
+  font-family: var(--font-sans);
+}
+
+/* Custom Asphalt Friction Texture */
+.asphalt-texture {
+  background-color: #050505;
+  background-image: 
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.035) 0px, rgba(255, 255, 255, 0.035) 1px, transparent 1px, transparent 10px),
+    repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.015) 0px, rgba(255, 255, 255, 0.015) 1px, transparent 1px, transparent 14px);
+  background-blend-mode: overlay;
+  position: relative;
+}
+
+.asphalt-texture::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  opacity: 0.12;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.8) 1px, transparent 0);
+  background-size: 6px 6px;
+  pointer-events: none;
+}
+
+/* Spotlight Cone Masking */
+.spotlight-glow {
+  background: radial-gradient(ellipse at top, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.03) 50%, transparent 80%);
+}
+
+.spotlight-glow-strong {
+  background: radial-gradient(ellipse at top, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.06) 45%, transparent 75%);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: #000000;
+}
+::-webkit-scrollbar-thumb {
+  background: #222222;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #444444;
+}
+
+/* Futuristic Liquid Glass glassmorphism and glossy cybernetic styling */
+.liquid-glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    0 4px 30px rgba(0, 0, 0, 0.4),
+    inset 0 1px 1px rgba(255, 255, 255, 0.1),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.liquid-glass-light {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 
+    0 4px 30px rgba(0, 0, 0, 0.05),
+    inset 0 1px 3px rgba(255, 255, 255, 0.8),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Liquid fluid reflection highlight overlay */
+.liquid-sheen {
+  position: relative;
+  overflow: hidden;
+}
+.liquid-sheen::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -60%;
+  width: 200%;
+  height: 100%;
+  background: linear-gradient(
+    30deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.08) 40%,
+    rgba(255, 255, 255, 0.15) 45%,
+    rgba(255, 255, 255, 0.08) 50%,
+    transparent 55%
+  );
+  transform: rotate(-15deg);
+  pointer-events: none;
+  animation: sheen-flow 8s ease-in-out infinite;
+}
+
+@keyframes sheen-flow {
+  0% { transform: translate(-30%, -30%) rotate(-15deg); }
+  50% { transform: translate(30%, 30%) rotate(-15deg); }
+  100% { transform: translate(-30%, -30%) rotate(-15deg); }
+}
+
+/* Hologram scanning line */
+.cyber-scan::after {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(to bottom, transparent, rgba(16, 185, 129, 0.4), transparent);
+  left: 0;
+  pointer-events: none;
+  animation: scanning 4s linear infinite;
+}
+
+@keyframes scanning {
+  0% { top: 0%; }
+  50% { top: 100%; }
+  100% { top: 0%; }
+}
+
+/* Fluid mercury orb motion */
+@keyframes fluid-mercury {
+  0% { transform: translate(0px, 0px) scale(1) rotate(0deg); }
+  33% { transform: translate(30px, -50px) scale(1.15) rotate(120deg); }
+  66% { transform: translate(-20px, 20px) scale(0.9) rotate(240deg); }
+  100% { transform: translate(0px, 0px) scale(1) rotate(360deg); }
+}
+
+.animate-mercury-1 {
+  animation: fluid-mercury 12s ease-in-out infinite alternate;
+}
+
+.animate-mercury-2 {
+  animation: fluid-mercury 16s ease-in-out infinite alternate-reverse;
+}
+
+/* Pulse animation for 3D blob */
+@keyframes morph-blob {
+  0% {
+    border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%;
+  }
+  50% {
+    border-radius: 70% 30% 52% 48% / 60% 40% 60% 40%;
+  }
+  100% {
+    border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%;
+  }
+}
+
+.animate-morph {
+  animation: morph-blob 8s ease-in-out infinite;
+}
+

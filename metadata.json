@@ -1,0 +1,6 @@
+{
+  "name": "Side B",
+  "description": "Aplicativo experimental de treinamento de corrida de alto contraste com foco em performance e análise profissional.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
