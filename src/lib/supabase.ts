@@ -1,10 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Retrieve values from Vite meta env safely via type casting
-const metaEnv = (import.meta as any).env || {};
-const rawUrl = metaEnv.VITE_SUPABASE_URL || 'https://ejztgxzmwutphlzxqmba.supabase.co/rest/v1/';
+// Retrieve values from Vite meta env safely using standard static properties
+const envUrl = import.meta.env?.VITE_SUPABASE_URL;
+const rawUrl = envUrl || 'https://ejztgxzmwutphlzxqmba.supabase.co/rest/v1/';
 const cleanUrl = rawUrl.replace(/\/rest\/v1\/?$/, ''); // Strip rest/v1 suffix if it exists
-const anonKey = metaEnv.VITE_SUPABASE_ANON_KEY || 'sb_publishable_CXGCH-4vO45tavB2MEdPGQ_cZY9kHDG';
+const anonKey = import.meta.env?.VITE_SUPABASE_ANON_KEY || 'sb_publishable_CXGCH-4vO45tavB2MEdPGQ_cZY9kHDG';
 
 // Initialize the Supabase Client
 export const supabase = createClient(cleanUrl, anonKey);
