@@ -47,9 +47,9 @@ body {
 
 /* Force standard font size of 16px minimum for form controls on smaller screens to entirely bypass the Safari/Chrome auto-zoom on input focus */
 @media screen and (max-width: 768px) {
-  input, 
-  select, 
-  textarea, 
+  input:not(.compact-input), 
+  select:not(.compact-input), 
+  textarea:not(.compact-input), 
   [contenteditable="true"] {
     font-size: 16px !important;
   }
@@ -100,25 +100,19 @@ body {
   background: #444444;
 }
 
-/* Futuristic Liquid Glass glassmorphism and glossy cybernetic styling */
+/* Futuristic Liquid Glass glassmorphism and glossy cybernetic styling - softened for maximum fluid blur */
 .liquid-glass {
-  background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(16px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 
-    0 4px 30px rgba(0, 0, 0, 0.4),
-    inset 0 1px 1px rgba(255, 255, 255, 0.1),
-    inset 0 -1px 2px rgba(0, 0, 0, 0.2);
+  background: rgba(255, 255, 255, 0.015);
+  backdrop-filter: blur(28px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  box-shadow: none;
 }
 
 .liquid-glass-light {
-  background: rgba(255, 255, 255, 0.65);
-  backdrop-filter: blur(16px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: 
-    0 4px 30px rgba(0, 0, 0, 0.05),
-    inset 0 1px 3px rgba(255, 255, 255, 0.8),
-    inset 0 -1px 2px rgba(0, 0, 0, 0.05);
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(28px) saturate(140%);
+  border: 1px solid rgba(0, 0, 0, 0.03);
+  box-shadow: none;
 }
 
 /* Liquid fluid reflection highlight overlay */

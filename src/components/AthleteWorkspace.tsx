@@ -150,7 +150,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed.prescriptions && parsed.zones) {
+        if (parsed && parsed.prescriptions && parsed.zones) {
           return parsed;
         }
       } catch (e) {}
@@ -248,7 +248,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          if (parsed.prescriptions && parsed.zones) {
+          if (parsed && parsed.prescriptions && parsed.zones) {
             setPlanilha(parsed);
           }
         } catch (e) {}
@@ -276,7 +276,12 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
   const [activityLogs, setActivityLogs] = useState<StoredRunActivity[]>(() => {
     const saved = localStorage.getItem(logsKey);
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) {}
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+      } catch (e) {}
     }
     return [
       { id: '1', day: 'SEG', date: '2026-05-18', distance: 4.8, durationSecs: 1440, pace: "5'00\"", hrBpm: 158, activityName: "8X(2MIN FORTE/ 2MIN LEVE)" },
@@ -327,11 +332,13 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // Ensure all 7 days have structure
-        const days = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB', 'DOM'];
-        let hasAll = true;
-        days.forEach(d => { if (!parsed[d]) hasAll = false; });
-        if (hasAll) return parsed;
+        if (parsed && typeof parsed === 'object') {
+          // Ensure all 7 days have structure
+          const days = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB', 'DOM'];
+          let hasAll = true;
+          days.forEach(d => { if (!parsed[d]) hasAll = false; });
+          if (hasAll) return parsed;
+        }
       } catch (e) {}
     }
     return {
@@ -358,7 +365,10 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
     const saved = localStorage.getItem(feedbacksKey);
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          return parsed;
+        }
       } catch (e) {}
     }
     return {
@@ -382,7 +392,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
 
   // Load current day's feedback values when selectedDay changes
   useEffect(() => {
-    const dayFeedback = feedbacks[selectedDay] || { comment: '', effort: 5, feeling: 'BOM', pain: 0, sleep: 8, energy: 8 };
+    const dayFeedback = (feedbacks && feedbacks[selectedDay]) || { comment: '', effort: 5, feeling: 'BOM', pain: 0, sleep: 8, energy: 8 };
     setCurrentFeedbackComment(dayFeedback.comment || '');
     setCurrentEffort(dayFeedback.effort || 5);
     setCurrentFeeling(dayFeedback.feeling || 'BOM');
@@ -394,7 +404,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
   const handleSaveFeedback = () => {
     setFeedbacks(prev => {
       const updated = {
-        ...prev,
+        ...(prev || {}),
         [selectedDay]: {
           comment: currentFeedbackComment,
           effort: currentEffort,
@@ -475,13 +485,13 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
 
   return (
     <div 
-      className={`relative w-full flex-grow flex flex-col justify-start items-center pt-4 pb-8 px-4 select-none min-h-screen overflow-y-auto transition-colors duration-300 ${
-        theme === 'light' ? 'bg-[#f5f5f7] text-[#1c1c1e]' : 'bg-[#000000] text-white'
+      className={`relative w-full flex-grow flex flex-col justify-start items-center pt-4 pb-8 px-4 select-none min-h-screen overflow-y-auto transition-all duration-300 ${
+        theme === 'light' ? 'bg-[#f5f5f7]/40 text-[#1c1c1e]' : 'bg-black/40 text-white'
       }`}
       id="athlete-workspace-monochrome-root"
     >
       
-      {/* 1. ATMOSPHERE LIGHTING LAYERS (Based strictly on user uploaded references with emerald touch) */}
+      {/* 1. ATMOSPHERE LIGHTING LAYERS (Based strictly on user uploaded references with monochromatic touch) */}
       
       {/* Spotlight mode - Vertical high-end light beam (Image 1 reference) */}
       {lightMode === 'SPOTLIGHT' && (
@@ -489,7 +499,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
           <div 
             id="spotlight-layer-glow"
             className={`absolute top-0 left-1/2 -translate-x-1/2 w-80 h-[380px] blur-3xl rounded-t-full pointer-events-none z-0 transition-colors ${
-              theme === 'light' ? 'bg-gradient-to-b from-emerald-500/[0.06] via-black/[0.005] to-transparent' : 'bg-gradient-to-b from-emerald-500/[0.045] via-white/[0.012] to-transparent'
+              theme === 'light' ? 'bg-gradient-to-b from-neutral-500/[0.06] via-black/[0.005] to-transparent' : 'bg-gradient-to-b from-white/[0.035] via-white/[0.012] to-transparent'
             }`}
           />
           <div 
@@ -499,8 +509,8 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
               width: '140px',
               height: '350px',
               background: theme === 'light' 
-                ? 'conic-gradient(from 165deg at 50% 0%, rgba(16,185,129,0.06) 0deg, rgba(0,0,0,0.002) 15deg, transparent 30deg, transparent 330deg, rgba(0,0,0,0.002) 345deg, rgba(16,185,129,0.06) 360deg)'
-                : 'conic-gradient(from 165deg at 50% 0%, rgba(16,185,129,0.08) 0deg, rgba(255,255,255,0.005) 15deg, transparent 30deg, transparent 330deg, rgba(255,255,255,0.005) 345deg, rgba(16,185,129,0.08) 360deg)',
+                ? 'conic-gradient(from 165deg at 50% 0%, rgba(255,255,255,0.06) 0deg, rgba(0,0,0,0.002) 15deg, transparent 30deg, transparent 330deg, rgba(0,0,0,0.002) 345deg, rgba(255,255,255,0.06) 360deg)'
+                : 'conic-gradient(from 165deg at 50% 0%, rgba(255,255,255,0.06) 0deg, rgba(255,255,255,0.005) 15deg, transparent 30deg, transparent 330deg, rgba(255,255,255,0.005) 345deg, rgba(255,255,255,0.06) 360deg)',
               maskImage: 'linear-gradient(to bottom, black 10%, transparent 95%) rotate(180deg)',
               WebkitMaskImage: 'linear-gradient(to bottom, black 10%, transparent 95%)',
               filter: 'blur(3px)',
@@ -508,7 +518,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
           />
           <div 
             id="spotlight-top-device-source"
-            className="absolute top-0 left-1/2 -translate-x-1/2 w-14 h-[2px] bg-emerald-400 rounded-full blur-[1px] pointer-events-none z-10 shadow-[0_0_8px_rgba(16,185,129,0.7)]" 
+            className="absolute top-0 left-1/2 -translate-x-1/2 w-14 h-[2px] bg-white rounded-full blur-[1px] pointer-events-none z-10 shadow-[0_0_8px_rgba(255,255,255,0.5)]" 
           />
         </>
       )}
@@ -517,7 +527,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
       {lightMode === 'DIFFUSE' && (
         <div 
           id="diffuse-layer-ambient"
-          className="absolute top-[20%] left-1/2 -translate-x-1/2 w-72 h-72 bg-emerald-500/[0.025] rounded-full blur-[80px] pointer-events-none z-0" 
+          className="absolute top-[20%] left-1/2 -translate-x-1/2 w-72 h-72 bg-white/[0.015] rounded-full blur-[80px] pointer-events-none z-0" 
         />
       )}
 
@@ -547,7 +557,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
 
       {/* 2. HEADER CONTAINER BAR */}
       <div 
-        className={`w-full max-w-sm flex justify-between items-center z-10 py-2.5 relative rounded-2xl px-3 transition-all duration-300 ${
+        className={`w-full max-w-sm lg:max-w-6xl flex justify-between items-center z-10 py-2.5 relative rounded-2xl px-3 transition-all duration-300 ${
           theme === 'light' 
             ? 'liquid-glass-light' 
             : 'liquid-glass'
@@ -569,10 +579,10 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
           id="lighting-mode-toggle"
           title="Toque para alternar o modo de iluminação (Foco / Difuso / Stealth)"
         >
-          <div className={`w-7 h-7 rounded-lg border flex items-center justify-center transition-all duration-300 group-hover:border-emerald-500 shadow-inner group-active:scale-95 ${
+          <div className={`w-7 h-7 rounded-lg border flex items-center justify-center transition-all duration-300 group-hover:border-white/40 shadow-inner group-active:scale-95 ${
             theme === 'light' ? 'bg-neutral-100 border-neutral-300' : 'bg-neutral-950 border-neutral-800'
           }`}>
-            <Zap className={`w-3.5 h-3.5 transition-all duration-300 ${lightMode === 'SPOTLIGHT' ? 'text-emerald-500 fill-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.3)]' : 'text-neutral-500'}`} />
+            <Zap className={`w-3.5 h-3.5 transition-all duration-300 ${lightMode === 'SPOTLIGHT' ? 'text-white fill-white/10 shadow-[0_0_10px_rgba(255,255,255,0.2)]' : 'text-neutral-500'}`} />
           </div>
           <div className="flex flex-col">
             <span className={`text-[7px] font-mono tracking-[0.2em] uppercase leading-none ${
@@ -584,14 +594,14 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
           </div>
         </div>
 
-        {/* Stopwatch Active Display (Centered monochrome tech badge with emerald elements) */}
+        {/* Stopwatch Active Display (Centered monochrome tech badge with silver elements) */}
         <div 
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border font-mono text-[10px] tracking-widest text-[#10b981] shadow-inner transition-colors ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border font-mono text-[10px] tracking-widest text-white shadow-inner transition-colors ${
             theme === 'light' ? 'bg-neutral-100/80 border-neutral-250' : 'bg-neutral-950/70 border-neutral-900'
           }`}
           id="stopwatch-badge"
         >
-          <Clock className="w-3.5 h-3.5 text-emerald-500 animate-pulse shadow-[0_0_6px_#10b981]" />
+          <Clock className="w-3.5 h-3.5 text-white animate-pulse drop-shadow-[0_0_6px_rgba(255,255,255,0.4)]" />
           <span className={`font-extrabold ${theme === 'light' ? 'text-neutral-850' : 'text-white'}`}>{formatStopwatch(seconds)}</span>
         </div>
 
@@ -599,21 +609,21 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
         <div className="flex items-center gap-1" id="action-buttons-group">
           <button 
             onClick={() => setIsStatsOpen(!isStatsOpen)}
-            className={`w-8 h-8 rounded-lg border flex items-center justify-center hover:border-emerald-500 transition cursor-pointer ${
+            className={`w-8 h-8 rounded-lg border flex items-center justify-center hover:border-white/40 transition cursor-pointer ${
               theme === 'light' ? 'bg-white border-neutral-200 text-neutral-600' : 'bg-neutral-950 border-neutral-900 text-neutral-400'
             }`}
             id="statistics-toggle-btn"
             title="Sua Consistência Semanal"
           >
-            <TrendingUp className="w-3.5 h-3.5 hover:text-emerald-500 transition" />
+            <TrendingUp className="w-3.5 h-3.5 hover:text-white transition" />
           </button>
           
           <button 
             onClick={() => setActiveTab(activeTab === 'TREINOS' ? 'PERFIL' : 'TREINOS')}
             className={`w-8 h-8 rounded-lg border flex items-center justify-center transition cursor-pointer ${
               activeTab === 'PERFIL' 
-                ? (theme === 'light' ? 'bg-neutral-100 border-emerald-500 text-emerald-650 font-bold' : 'bg-neutral-900 border-emerald-500 text-emerald-400') 
-                : (theme === 'light' ? 'bg-white border-neutral-205 text-neutral-600 hover:border-emerald-500/50' : 'bg-neutral-950 border-neutral-900 text-neutral-400 hover:border-emerald-500/50')
+                ? (theme === 'light' ? 'bg-neutral-100 border-white/40 text-neutral-900 font-bold' : 'bg-neutral-900 border-white/40 text-white') 
+                : (theme === 'light' ? 'bg-white border-neutral-205 text-neutral-600 hover:border-white/30' : 'bg-neutral-950 border-neutral-900 text-neutral-400 hover:border-white/30')
             }`}
             id="tab-toggle-btn"
             title="Configurações de Conta / Perfil"
@@ -636,14 +646,14 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
       </div>
 
       {/* CLOUD SYNC BAR */}
-      <div className="w-full max-w-sm mt-3 z-10 px-1" id="supabase-cloud-sync-bar">
+      <div className="w-full max-w-sm lg:max-w-6xl mt-3 z-10 px-1" id="supabase-cloud-sync-bar">
         <div className={`p-2 rounded-xl border flex items-center justify-between text-[9px] font-mono transition-all ${
           supabaseStatus === 'SYNCED' 
-            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500' 
+            ? 'bg-white/[0.04] border-white/20 text-white' 
             : supabaseStatus === 'CONNECTING'
             ? 'bg-amber-500/10 border-amber-500/30 text-amber-500'
             : supabaseStatus === 'LOCAL_ONLY'
-            ? 'bg-sky-500/10 border-sky-500/30 text-sky-400 shadow-sm'
+            ? 'bg-zinc-800/25 border-zinc-700/35 text-zinc-350 shadow-sm'
             : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
         }`}>
           <div className="flex items-center gap-1.5">
@@ -662,7 +672,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
             {supabaseStatus === 'LOCAL_ONLY' && (
               <button 
                 onClick={() => setShowSqlDialog(true)}
-                className="px-2 py-0.5 rounded bg-[#0284c7] text-[#fff] hover:bg-sky-600 hover:text-white text-[8px] font-black uppercase tracking-widest cursor-pointer transition-all active:scale-95 z-20"
+                className="px-2 py-0.5 rounded bg-zinc-200 text-black hover:bg-white hover:text-black text-[8px] font-black uppercase tracking-widest cursor-pointer transition-all active:scale-95 z-20"
                 id="btn-active-supabase-cloud"
               >
                 Configurar SQL
@@ -673,8 +683,8 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
             )}
             {supabaseStatus === 'SYNCED' && (
               <span className="relative flex h-1.5 w-1.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white"></span>
               </span>
             )}
           </div>
@@ -682,7 +692,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
       </div>
 
       {/* 3. PRIMARY VIEW SWITCH TABS (TREINOS // PERFIL) */}
-      <div className="w-full max-w-sm mt-5 z-10">
+      <div className="w-full max-w-sm lg:max-w-6xl mt-5 z-10">
         <div 
           className={`grid grid-cols-2 gap-1.5 p-1 border rounded-xl transition-colors ${
             theme === 'light' ? 'bg-neutral-100 border-neutral-200' : 'bg-neutral-950/80 border-neutral-900'
@@ -717,13 +727,13 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
 
         {/* Illuminated track bar mirroring Onboarding layout directly */}
         <div className="relative w-full h-[1px] bg-neutral-900/50 mt-2">
-          <div className="absolute left-1/2 -translate-x-1/2 top-0 w-24 h-full bg-emerald-500 shadow-[0_0_12px_#10b981,0_0_3px_#34d399]" />
+          <div className="absolute left-1/2 -translate-x-1/2 top-0 w-24 h-full bg-white shadow-[0_0_12px_rgba(255,255,255,0.6),0_0_3px_rgba(255,255,255,0.3)]" />
         </div>
       </div>
 
       {/* Main Column Grid */}
       <div 
-        className="w-full max-w-sm flex-1 flex flex-col mt-4 gap-4 z-10 pb-4"
+        className="w-full max-w-sm lg:max-w-6xl flex-grow flex flex-col mt-4 gap-4 z-10 pb-4"
         id="main-scrolling-content-container"
       >
         <AnimatePresence mode="wait">
@@ -733,26 +743,26 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
               initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -5 }}
-              className="flex-grow flex flex-col gap-4"
+              className="flex-grow w-full grid grid-cols-1 lg:grid-cols-12 gap-5 lg:items-start"
               id="trainings-tab-active-view"
             >
               
               {/* 4. METRIC PROTOCOLO DE TREINO CARD */}
               <div 
-                className={`w-full p-5 flex flex-col gap-4 relative overflow-hidden transition-all duration-300 rounded-2xl liquid-sheen ${
+                className={`w-full lg:col-span-4 p-5 flex flex-col gap-4 relative overflow-hidden transition-all duration-300 rounded-2xl liquid-sheen ${
                   theme === 'light' ? 'liquid-glass-light text-neutral-900 shadow-lg' : 'liquid-glass text-white shadow-2xl'
                 }`}
                 id="prescription-info-card"
               >
                 {/* Thin horizontal strip accent at the bottom representing the landing page indicator line */}
                 <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-neutral-900/50">
-                  <div className="absolute left-1/2 -translate-x-1/2 top-0 w-32 h-full bg-emerald-500" />
+                  <div className="absolute left-1/2 -translate-x-1/2 top-0 w-32 h-full bg-white" />
                 </div>
 
                 {/* Upper line: Category Tag + Dropdown */}
                 <div className="flex justify-between items-center">
-                  <span className="text-[8px] font-mono font-bold tracking-[0.25em] text-emerald-500 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_6px_#10b981]" />
+                  <span className="text-[8px] font-mono font-bold tracking-[0.25em] text-white flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse shadow-[0_0_6px_rgba(255,255,255,0.4)]" />
                     STATUS PLANILHA
                   </span>
 
@@ -812,13 +822,13 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                   </div>
                 </div>
 
-                {/* 5. COLLAPSIBLE ZONES CARD (Monochromatic list with emerald high-performance highlighting) */}
+                {/* 5. COLLAPSIBLE ZONES CARD (Monochromatic list with premium high-performance highlighting) */}
                 <div className={`border-t pt-3 mt-1 ${
                   theme === 'light' ? 'border-neutral-200' : 'border-neutral-900/70'
                 }`} id="pace-zones-collapsible">
                   <button
                     onClick={() => setIsZonesExpanded(!isZonesExpanded)}
-                    className={`w-full flex items-center justify-between text-left py-1.5 px-3 border rounded-xl hover:border-emerald-500/40 transition-colors cursor-pointer ${
+                    className={`w-full flex items-center justify-between text-left py-1.5 px-3 border rounded-xl hover:border-white/30 transition-colors cursor-pointer ${
                       theme === 'light' ? 'bg-neutral-50 border-neutral-250 text-neutral-800' : 'bg-neutral-950 border-neutral-900 text-neutral-300'
                     }`}
                     id="btn-collapse-zones"
@@ -851,15 +861,15 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                                 key={z.name}
                                 className={`flex justify-between items-center p-2 rounded-lg ${
                                   isZ2
-                                    ? (theme === 'light' ? 'bg-emerald-50 border border-emerald-200' : 'bg-emerald-950/20 border border-emerald-900')
+                                    ? (theme === 'light' ? 'bg-neutral-100 border border-neutral-350' : 'bg-white/[0.04] border border-white/20')
                                     : (theme === 'light' ? 'bg-neutral-50 border border-neutral-200/60' : 'bg-neutral-950/40 border border-neutral-900')
                                 }`}
                               >
-                                <span className={isZ2 ? "text-emerald-500 font-bold animate-pulse flex items-center gap-1" : "text-neutral-500 font-medium"}>
-                                  {isZ2 && <span className="w-1 h-1 rounded-full bg-emerald-500" />}
+                                <span className={isZ2 ? "text-white font-bold animate-pulse flex items-center gap-1 font-black" : "text-neutral-500 font-medium"}>
+                                  {isZ2 && <span className="w-1 h-1 rounded-full bg-white" />}
                                   {z.name} ➔ {z.desc}
                                 </span>
-                                <span className={isZ2 ? "text-emerald-500 font-black" : (theme === 'light' ? 'text-neutral-800 font-bold' : 'text-neutral-250 font-bold')}>
+                                <span className={isZ2 ? "text-white font-black" : (theme === 'light' ? 'text-neutral-800 font-bold' : 'text-neutral-250 font-bold')}>
                                   {z.pace}
                                 </span>
                               </div>
@@ -871,6 +881,9 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                   </AnimatePresence>
                 </div>
               </div>
+
+              {/* CENTER COLUMN: WEEK SCHEDULE, GPS SIMULATOR & WORKOUT CARDS */}
+              <div className="w-full lg:col-span-5 flex flex-col gap-4">
 
               {/* MODAL VIEW TOGGLE BUTTONS */}
               <div className="flex items-center justify-between mt-1 px-1 mb-2">
@@ -884,7 +897,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                     onClick={() => setViewMode('DIARIO')}
                     className={`px-3 py-1 font-mono text-[8px] tracking-widest uppercase rounded-md transition-all cursor-pointer ${
                       viewMode === 'DIARIO'
-                        ? (theme === 'light' ? 'bg-white text-neutral-950 font-black shadow-sm border border-neutral-200' : 'bg-[#1c1c1e] text-emerald-400 font-extrabold')
+                        ? (theme === 'light' ? 'bg-white text-neutral-950 font-black shadow-sm border border-neutral-200' : 'bg-[#1c1c1e] text-white font-extrabold')
                         : 'text-neutral-500 hover:text-neutral-350'
                     }`}
                   >
@@ -894,7 +907,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                     onClick={() => setViewMode('SEMANAL')}
                     className={`px-3 py-1 font-mono text-[8px] tracking-widest uppercase rounded-md transition-all cursor-pointer ${
                       viewMode === 'SEMANAL'
-                        ? (theme === 'light' ? 'bg-white text-neutral-950 font-black shadow-sm border border-neutral-200' : 'bg-[#1c1c1e] text-emerald-400 font-extrabold')
+                        ? (theme === 'light' ? 'bg-white text-neutral-950 font-black shadow-sm border border-neutral-200' : 'bg-[#1c1c1e] text-white font-extrabold')
                         : 'text-neutral-500 hover:text-neutral-350'
                     }`}
                   >
@@ -929,7 +942,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                           <span className="uppercase">{day}</span>
                           
                           {isDone ? (
-                            <span className={`w-1.5 h-1.5 rounded-full ${isActive ? (theme === 'light' ? 'bg-emerald-300' : 'bg-emerald-600') : 'bg-emerald-500 shadow-[0_0_8px_#10b981]'} block`} />
+                            <span className={`w-1.5 h-1.5 rounded-full ${isActive ? (theme === 'light' ? 'bg-zinc-300' : 'bg-zinc-500') : 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.6)]'} block`} />
                           ) : (
                             <span className={`w-1 h-1 rounded-full ${isActive ? (theme === 'light' ? 'bg-neutral-300' : 'bg-neutral-800') : 'bg-neutral-705 block'} block`} />
                           )}
@@ -942,18 +955,18 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                   <div 
                     className={`w-full p-4 border rounded-2xl relative overflow-hidden transition-all duration-300 ${
                       isGpsActive 
-                        ? 'border-emerald-500 bg-emerald-950/[0.04] shadow-[0_0_15px_rgba(16,185,129,0.15)]' 
+                        ? 'border-white bg-white/[0.02] shadow-[0_0_15px_rgba(255,255,255,0.06)]' 
                         : (theme === 'light' ? 'bg-white border-neutral-200 shadow-xs' : 'bg-neutral-950/70 border-neutral-900')
                     }`}
                     id="gps-recording-hub"
                   >
                     <div className="flex justify-between items-center mb-2.5">
-                      <span className="text-[8px] font-mono font-bold tracking-[0.25em] text-emerald-500 flex items-center gap-1.5 uppercase">
-                        <span className={`w-2 h-2 rounded-full bg-emerald-500 ${isGpsActive && !gpsPaused ? 'animate-ping' : 'animate-pulse'}`} />
+                      <span className="text-[8px] font-mono font-bold tracking-[0.25em] text-white flex items-center gap-1.5 uppercase">
+                        <span className={`w-2 h-2 rounded-full bg-white ${isGpsActive && !gpsPaused ? 'animate-ping' : 'animate-pulse'}`} />
                         REGISTRO DE CORRIDA POR SENSOR (GPS ATIVO)
                       </span>
                       {isGpsActive && (
-                        <span className="px-2 py-0.5 rounded text-[7px] font-bold tracking-wider bg-emerald-500 text-black font-mono animate-pulse">
+                        <span className="px-2 py-0.5 rounded text-[7px] font-bold tracking-wider bg-white text-black font-mono animate-pulse">
                           ● TRANSMITINDO AO VIVO
                         </span>
                       )}
@@ -971,7 +984,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                             setGpsSecs(0);
                             setGpsDist(0);
                           }}
-                          className="px-5 py-2 bg-emerald-500 text-black border border-emerald-400 font-mono font-black text-[9px] tracking-[0.2em] rounded-xl hover:scale-105 active:scale-95 transition-all shadow-[0_0_12px_rgba(16,185,129,0.4)] flex items-center gap-1.5 uppercase cursor-pointer"
+                          className="px-5 py-2 bg-white text-black border border-white font-mono font-black text-[9px] tracking-[0.2em] rounded-xl hover:scale-105 active:scale-95 transition-all shadow-[0_0_12px_rgba(255,255,255,0.2)] flex items-center gap-1.5 uppercase cursor-pointer"
                         >
                           <Play className="w-3.5 h-3.5 fill-current" />
                           CONECTAR SENSOR DE TREINO (GPS)
@@ -985,7 +998,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                             theme === 'light' ? 'bg-neutral-50 border-neutral-200' : 'bg-black border-neutral-905'
                           }`}>
                             <span className="text-[6.5px] text-neutral-500 font-bold tracking-wider uppercase block">DISTÂNCIA</span>
-                            <span className="text-base font-black text-emerald-500 font-mono tracking-tight mt-0.5">
+                            <span className="text-base font-black text-white font-mono tracking-tight mt-0.5">
                               {gpsDist.toFixed(2)} km
                             </span>
                           </div>
@@ -1001,7 +1014,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                             theme === 'light' ? 'bg-neutral-50 border-neutral-200' : 'bg-black border-neutral-905'
                           }`}>
                             <span className="text-[6.5px] text-neutral-500 font-bold tracking-wider uppercase block">F. CARDÍACA</span>
-                            <span className="text-base font-black text-emerald-500 font-mono tracking-tight flex items-center gap-1 justify-center mt-0.5 animate-pulse">
+                            <span className="text-base font-black text-white font-mono tracking-tight flex items-center gap-1 justify-center mt-0.5 animate-pulse">
                               <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" />
                               {gpsHr} <span className="text-[7.5px] text-neutral-500 font-normal">bpm</span>
                             </span>
@@ -1031,7 +1044,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                             onClick={() => setGpsPaused(!gpsPaused)}
                             className={`flex-1 py-1.5 font-mono text-[8px] font-bold tracking-widest border rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                               gpsPaused 
-                                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500' 
+                                ? 'bg-white/[0.04] text-white border-white/20' 
                                 : (theme === 'light' ? 'bg-neutral-100 hover:bg-neutral-200 text-neutral-800 border-neutral-250' : 'bg-neutral-900 hover:bg-neutral-850 text-neutral-300 border-neutral-800')
                             }`}
                           >
@@ -1122,7 +1135,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                         </span>
                       </div>
                       <div>
-                        <span className="text-[7px] font-mono tracking-[0.25em] text-emerald-500 uppercase block">
+                        <span className="text-[7px] font-mono tracking-[0.25em] text-white uppercase block">
                           {planilha.prescriptions[selectedDay]?.badge || 'PRESCRIÇÃO'}
                         </span>
                         <h3 className={`text-[10px] font-bold tracking-widest uppercase font-mono mt-1 ${
@@ -1145,7 +1158,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                     
                     {/* 7a. WARM UP PORTION CARD */}
                     <div 
-                      className={`p-4 flex flex-col gap-3 transition-all duration-300 relative rounded-2xl hover:scale-[1.01] hover:shadow-[0_0_15px_rgba(16,185,129,0.12)] hover:border-emerald-500/60 ${
+                      className={`p-4 flex flex-col gap-3 transition-all duration-300 relative rounded-2xl hover:scale-[1.01] hover:shadow-[0_0_15px_rgba(255,255,255,0.08)] hover:border-white/30 ${
                         theme === 'light' ? 'liquid-glass-light border-neutral-200 shadow-sm' : 'liquid-glass'
                       }`}
                       id="portion-warmup-card"
@@ -1154,14 +1167,14 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                         <h4 className={`font-mono text-[9px] font-bold tracking-[0.2em] uppercase flex items-center gap-2 ${
                           theme === 'light' ? 'text-neutral-500' : 'text-neutral-400'
                         }`}>
-                          <span className="w-1.5 h-3 bg-emerald-500 block rounded-full shadow-[0_0_6px_#10b981]" />
+                          <span className="w-1.5 h-3 bg-white block rounded-full shadow-[0_0_6px_rgba(255,255,255,0.4)]" />
                           AQUECIMENTO (WARM UP)
                         </h4>
                         
                         {/* Status Badge Custom Sporty Emerald Styling */}
                         <span className={`px-2 py-0.5 font-mono text-[7px] font-bold tracking-widest border transition-all uppercase rounded ${
                           workoutStates[selectedDay]?.warmup === 'CONCLUÍDO' 
-                            ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/80 shadow-[0_0_8px_rgba(16,185,129,0.2)]'
+                            ? 'bg-white/[0.06] text-white border-white/20 shadow-[0_0_8px_rgba(255,255,255,0.2)]'
                             : workoutStates[selectedDay]?.warmup === 'ADAPTADO'
                             ? 'bg-yellow-950/20 text-yellow-500 border-yellow-650/60'
                             : workoutStates[selectedDay]?.warmup === 'NÃO FEITO'
@@ -1189,7 +1202,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                           onClick={() => handleSetStatus(selectedDay, 'warmup', 'CONCLUÍDO')}
                           className={`flex-1 py-1 px-1 font-mono text-[8.5px] font-bold tracking-wider rounded border transition-all cursor-pointer ${
                             workoutStates[selectedDay]?.warmup === 'CONCLUÍDO'
-                              ? 'bg-emerald-500 text-black border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.3)] font-extrabold'
+                              ? 'bg-white text-black border-white shadow-[0_0_10px_rgba(255,255,255,0.4)] font-extrabold'
                               : (theme === 'light' ? 'bg-neutral-100 hover:bg-neutral-150 hover:text-neutral-900 text-neutral-700 border-neutral-200' : 'bg-neutral-900 hover:bg-neutral-850 hover:text-white text-neutral-400 border-neutral-800')
                           }`}
                           id="btn-warmup-concluido"
@@ -1223,7 +1236,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
 
                     {/* 7b. MAIN SET PORTION CARD */}
                     <div 
-                      className={`p-4 flex flex-col gap-3 transition-all duration-300 relative rounded-2xl hover:scale-[1.01] hover:shadow-[0_0_15px_rgba(16,185,129,0.12)] hover:border-emerald-500/60 ${
+                      className={`p-4 flex flex-col gap-3 transition-all duration-300 relative rounded-2xl hover:scale-[1.01] hover:shadow-[0_0_15px_rgba(255,255,255,0.08)] hover:border-white/30 ${
                         theme === 'light' ? 'liquid-glass-light border-neutral-200 shadow-sm' : 'liquid-glass'
                       }`}
                       id="portion-mainset-card"
@@ -1232,13 +1245,13 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                         <h4 className={`font-mono text-[9px] font-bold tracking-[0.2em] uppercase flex items-center gap-2 ${
                           theme === 'light' ? 'text-neutral-500' : 'text-neutral-400'
                         }`}>
-                          <span className="w-1.5 h-3 bg-emerald-500 block rounded-full shadow-[0_0_6px_#10b981]" />
+                          <span className="w-1.5 h-3 bg-white block rounded-full shadow-[0_0_6px_rgba(255,255,255,0.4)]" />
                           BLOCO PRINCIPAL (MAIN SET)
                         </h4>
                         
                         <span className={`px-2 py-0.5 font-mono text-[7px] font-bold tracking-widest border transition-all uppercase rounded ${
                           workoutStates[selectedDay]?.mainSet === 'CONCLUÍDO' 
-                            ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/80 shadow-[0_0_8px_rgba(16,185,129,0.2)]'
+                            ? 'bg-white/[0.06] text-white border-white/20 shadow-[0_0_8px_rgba(255,255,255,0.2)]'
                             : workoutStates[selectedDay]?.mainSet === 'ADAPTADO'
                             ? 'bg-yellow-950/20 text-yellow-500 border-yellow-650/60'
                             : workoutStates[selectedDay]?.mainSet === 'NÃO FEITO'
@@ -1265,7 +1278,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                           onClick={() => handleSetStatus(selectedDay, 'mainSet', 'CONCLUÍDO')}
                           className={`flex-1 py-1 px-1 font-mono text-[8.5px] font-bold tracking-wider rounded border transition-all cursor-pointer ${
                             workoutStates[selectedDay]?.mainSet === 'CONCLUÍDO'
-                              ? 'bg-emerald-500 text-black border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.3)] font-extrabold'
+                              ? 'bg-white text-black border-white shadow-[0_0_10px_rgba(255,255,255,0.4)] font-extrabold'
                               : (theme === 'light' ? 'bg-neutral-100 hover:bg-neutral-150 hover:text-neutral-900 text-neutral-700 border-neutral-200' : 'bg-neutral-900 hover:bg-neutral-850 hover:text-white text-neutral-450 border-neutral-800')
                           }`}
                           id="btn-mainset-concluido"
@@ -1299,7 +1312,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
 
                     {/* 7c. COOL DOWN PORTION CARD */}
                     <div 
-                      className={`p-4 flex flex-col gap-3 transition-all duration-300 relative rounded-2xl hover:scale-[1.01] hover:shadow-[0_0_15px_rgba(16,185,129,0.12)] hover:border-emerald-500/60 ${
+                      className={`p-4 flex flex-col gap-3 transition-all duration-300 relative rounded-2xl hover:scale-[1.01] hover:shadow-[0_0_15px_rgba(255,255,255,0.08)] hover:border-white/30 ${
                         theme === 'light' ? 'liquid-glass-light border-neutral-200 shadow-sm' : 'liquid-glass'
                       }`}
                       id="portion-cooldown-card"
@@ -1308,13 +1321,13 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                         <h4 className={`font-mono text-[9px] font-bold tracking-[0.2em] uppercase flex items-center gap-2 ${
                           theme === 'light' ? 'text-neutral-500' : 'text-neutral-400'
                         }`}>
-                          <span className="w-1.5 h-3 bg-emerald-500 block rounded-full shadow-[0_0_6px_#10b981]" />
+                          <span className="w-1.5 h-3 bg-white block rounded-full shadow-[0_0_6px_rgba(255,255,255,0.4)]" />
                           RETORNO À CALMA (COOL DOWN)
                         </h4>
                         
                         <span className={`px-2 py-0.5 font-mono text-[7px] font-bold tracking-widest border transition-all uppercase rounded ${
                           workoutStates[selectedDay]?.coolDown === 'CONCLUÍDO' 
-                            ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/80 shadow-[0_0_8px_rgba(16,185,129,0.2)]'
+                            ? 'bg-white/[0.06] text-white border-white/20 shadow-[0_0_8px_rgba(255,255,255,0.2)]'
                             : workoutStates[selectedDay]?.coolDown === 'ADAPTADO'
                             ? 'bg-yellow-950/20 text-yellow-500 border-yellow-650/60'
                             : workoutStates[selectedDay]?.coolDown === 'NÃO FEITO'
@@ -1341,7 +1354,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                           onClick={() => handleSetStatus(selectedDay, 'coolDown', 'CONCLUÍDO')}
                           className={`flex-1 py-1 px-1 font-mono text-[8.5px] font-bold tracking-wider rounded border transition-all cursor-pointer ${
                             workoutStates[selectedDay]?.coolDown === 'CONCLUÍDO'
-                              ? 'bg-emerald-500 text-black border-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.3)] font-extrabold'
+                              ? 'bg-white text-black border-white shadow-[0_0_10px_rgba(255,255,255,0.4)] font-extrabold'
                               : (theme === 'light' ? 'bg-neutral-100 hover:bg-neutral-150 hover:text-neutral-900 text-neutral-700 border-neutral-200' : 'bg-neutral-900 hover:bg-neutral-850 hover:text-white text-neutral-450 border-neutral-800')
                           }`}
                           id="btn-cooldown-concluido"
@@ -1382,7 +1395,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                     }`}
                     id="athlete-feedback-input-panel"
                   >
-                    <span className="text-[7.5px] font-mono tracking-[0.25em] text-emerald-500 font-bold block uppercase mb-3">
+                    <span className="text-[7.5px] font-mono tracking-[0.25em] text-white font-bold block uppercase mb-3">
                       RELATO DE RENDIMENTO &amp; FEEDBACK SUBJETIVO ({selectedDay})
                     </span>
 
@@ -1415,7 +1428,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                       <div className="space-y-1 font-mono">
                         <div className="flex justify-between items-center text-[7px] text-neutral-500 font-bold uppercase">
                           <span>ESFORÇO ADAPTATIVO:</span>
-                          <span className="text-emerald-500 font-black">{currentEffort}/10 ({currentEffort <= 3 ? 'LEVE' : currentEffort <= 6 ? 'MODERADO' : currentEffort <= 8 ? 'INTENSO' : 'MÁXIMO'})</span>
+                          <span className="text-white font-black">{currentEffort}/10 ({currentEffort <= 3 ? 'LEVE' : currentEffort <= 6 ? 'MODERADO' : currentEffort <= 8 ? 'INTENSO' : 'MÁXIMO'})</span>
                         </div>
                         <input 
                           type="range"
@@ -1423,7 +1436,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                           max="10"
                           value={currentEffort}
                           onChange={(e) => setCurrentEffort(parseInt(e.target.value))}
-                          className={`w-full h-1 rounded-lg appearance-none cursor-pointer accent-emerald-500 ${
+                          className={`w-full h-1 rounded-lg appearance-none cursor-pointer accent-white ${
                             theme === 'light' ? 'bg-neutral-200' : 'bg-neutral-900 border border-neutral-800'
                           }`}
                         />
@@ -1433,7 +1446,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                       <div className="space-y-1 font-mono">
                         <div className="flex justify-between items-center text-[7px] text-neutral-500 font-bold uppercase">
                           <span>QUALIDADE DO SONO:</span>
-                          <span className="text-emerald-500 font-black">{currentSleep}/10 ({currentSleep <= 4 ? 'RUIM' : currentSleep <= 7 ? 'REGULAR' : 'REGENERADOR'})</span>
+                          <span className="text-white font-black">{currentSleep}/10 ({currentSleep <= 4 ? 'RUIM' : currentSleep <= 7 ? 'REGULAR' : 'REGENERADOR'})</span>
                         </div>
                         <input 
                           type="range"
@@ -1441,7 +1454,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                           max="10"
                           value={currentSleep}
                           onChange={(e) => setCurrentSleep(parseInt(e.target.value))}
-                          className={`w-full h-1 rounded-lg appearance-none cursor-pointer accent-emerald-555 ${
+                          className={`w-full h-1 rounded-lg appearance-none cursor-pointer accent-white ${
                             theme === 'light' ? 'bg-neutral-200' : 'bg-neutral-900 border border-neutral-800'
                           }`}
                         />
@@ -1451,7 +1464,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                       <div className="space-y-1 font-mono">
                         <div className="flex justify-between items-center text-[7px] text-neutral-500 font-bold uppercase">
                           <span>DOR / DESCONFORTO MUSCULAR:</span>
-                          <span className="text-emerald-500 font-black">{currentPain}/10 ({currentPain === 0 ? 'NENHUMA' : currentPain <= 3 ? 'FRACA' : currentPain <= 6 ? 'MODERADA' : 'ATENÇÃO/SEVERA'})</span>
+                          <span className="text-white font-black">{currentPain}/10 ({currentPain === 0 ? 'NENHUMA' : currentPain <= 3 ? 'FRACA' : currentPain <= 6 ? 'MODERADA' : 'ATENÇÃO/SEVERA'})</span>
                         </div>
                         <input 
                           type="range"
@@ -1459,7 +1472,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                           max="10"
                           value={currentPain}
                           onChange={(e) => setCurrentPain(parseInt(e.target.value))}
-                          className={`w-full h-1 rounded-lg appearance-none cursor-pointer accent-emerald-400 ${
+                          className={`w-full h-1 rounded-lg appearance-none cursor-pointer accent-white ${
                             theme === 'light' ? 'bg-neutral-200' : 'bg-neutral-900 border border-neutral-800'
                           }`}
                         />
@@ -1469,7 +1482,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                       <div className="space-y-1 font-mono">
                         <div className="flex justify-between items-center text-[7px] text-neutral-500 font-bold uppercase">
                           <span>NÍVEL DE DISPOSIÇÃO / RECUPERAÇÃO:</span>
-                          <span className="text-emerald-500 font-black">{currentEnergy}/10 ({currentEnergy <= 4 ? 'CRATIVO' : currentEnergy <= 7 ? 'ESTÁVEL' : 'EXCELENTE'})</span>
+                          <span className="text-white font-black">{currentEnergy}/10 ({currentEnergy <= 4 ? 'CRATIVO' : currentEnergy <= 7 ? 'ESTÁVEL' : 'EXCELENTE'})</span>
                         </div>
                         <input 
                           type="range"
@@ -1477,7 +1490,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                           max="10"
                           value={currentEnergy}
                           onChange={(e) => setCurrentEnergy(parseInt(e.target.value))}
-                          className={`w-full h-1 rounded-lg appearance-none cursor-pointer accent-emerald-500 ${
+                          className={`w-full h-1 rounded-lg appearance-none cursor-pointer accent-white ${
                             theme === 'light' ? 'bg-neutral-200' : 'bg-neutral-900 border border-neutral-800'
                           }`}
                         />
@@ -1491,7 +1504,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                           value={currentFeedbackComment}
                           onChange={(e) => setCurrentFeedbackComment(e.target.value)}
                           placeholder="Relate dores, percepções, ou observações sobre o ritmo para o Coach analisar..."
-                          className={`w-full border rounded-lg p-2 text-[9px] focus:border-emerald-500 focus:outline-none leading-relaxed transition-all resize-none font-mono ${
+                          className={`w-full border rounded-lg p-2 text-[9px] focus:border-white focus:outline-none leading-relaxed transition-all resize-none font-mono ${
                             theme === 'light' 
                               ? 'bg-neutral-50 border-neutral-200 text-neutral-950 placeholder:text-neutral-400' 
                               : 'bg-black border-neutral-900 text-white placeholder:text-neutral-700'
@@ -1504,12 +1517,12 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                         onClick={handleSaveFeedback}
                         className={`w-full py-2.5 font-bold text-[8.5px] tracking-widest text-center transition-all rounded-lg uppercase cursor-pointer flex items-center justify-center gap-1.5 border ${
                           theme === 'light'
-                            ? 'bg-neutral-955 hover:bg-emerald-500 hover:text-black border-neutral-905 text-white'
-                            : 'bg-neutral-900 hover:bg-emerald-500 hover:text-black border-neutral-800 text-white hover:border-emerald-450'
+                            ? 'bg-neutral-955 hover:bg-white hover:text-black border-neutral-905 text-white'
+                            : 'bg-neutral-900 hover:bg-white hover:text-black border-neutral-800 text-white hover:border-white'
                         }`}
                       >
                         {showFeedbackSuccess ? (
-                          <span className="text-emerald-500 font-black animate-pulse flex items-center gap-1">
+                          <span className="text-white font-black animate-pulse flex items-center gap-1">
                             ✓ RELATO PUBLICADO COM SUCESSO!
                           </span>
                         ) : (
@@ -1523,7 +1536,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                   <div className={`p-4 border rounded-xl font-mono text-left transition-colors ${
                     theme === 'light' ? 'bg-white border-neutral-200 shadow-xs' : 'bg-neutral-950/70 border-neutral-900'
                   }`}>
-                    <span className="text-[7.5px] font-mono tracking-[0.25em] text-emerald-500 font-bold block uppercase mb-2">
+                    <span className="text-[7.5px] font-mono tracking-[0.25em] text-white font-bold block uppercase mb-2">
                       HISTÓRICO SENSORIAL DE CORRIDAS ({selectedDay})
                     </span>
                     {activityLogs.filter(log => log.day === selectedDay).length === 0 ? (
@@ -1540,7 +1553,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                             }`}
                           >
                             <div>
-                              <span className="text-emerald-500 font-bold uppercase">{log.activityName}</span>
+                              <span className="text-white font-bold uppercase">{log.activityName}</span>
                               <div className="flex items-center gap-2 mt-0.5 text-[7px] text-neutral-500 uppercase">
                                 <span>Distância: {log.distance}km</span>
                                 <span>Tempo: {Math.floor(log.durationSecs / 60)}m{log.durationSecs % 60}s</span>
@@ -1575,10 +1588,10 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                     theme === 'light' ? 'bg-white border-neutral-200 shadow-sm' : 'bg-neutral-950/40 border-neutral-900'
                   }`}>
                     <div className="flex items-center gap-2">
-                      <Calendar className="text-emerald-500 w-4 h-4" />
+                      <Calendar className="text-white w-4 h-4" />
                       <span className="text-[9px] font-mono tracking-widest text-neutral-400 font-bold uppercase">VISÃO GERAL DO PLANEJAMENTO</span>
                     </div>
-                    <span className="text-[8px] font-mono font-bold text-emerald-500 uppercase">
+                    <span className="text-[8px] font-mono font-bold text-white uppercase">
                       {completedDaysCount} de 7 CONCLUÍDOS
                     </span>
                   </div>
@@ -1594,7 +1607,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                         key={day}
                         className={`border rounded-2xl p-4 transition-all duration-300 relative ${
                           isSelected 
-                            ? 'border-emerald-500 bg-emerald-500/[0.015]' 
+                            ? 'border-white bg-white/[0.015]' 
                             : (theme === 'light' ? 'bg-white border-neutral-200 hover:border-neutral-350' : 'bg-neutral-950/70 border-neutral-900 hover:border-neutral-850')
                         }`}
                       >
@@ -1606,7 +1619,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                               <span className={`text-[10px] font-extrabold ${theme === 'light' ? 'text-neutral-950' : 'text-white'}`}>{day}</span>
                             </div>
                             <div>
-                              <span className="text-[7px] font-mono tracking-[0.2em] text-emerald-500 uppercase block">
+                              <span className="text-[7px] font-mono tracking-[0.2em] text-white uppercase block">
                                 {prescriptionExists?.badge || 'DIRECIONAMENTO / DESCANSO'}
                               </span>
                               <h4 className={`text-[9.5px] font-extrabold tracking-wider uppercase font-mono mt-0.5 ${
@@ -1620,7 +1633,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                           {/* Unified Done/Pendente Badge */}
                           <span className={`px-2 py-0.5 font-mono text-[6.5px] font-bold tracking-widest border rounded transition-all uppercase ${
                             isDone 
-                              ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/80 shadow-[0_0_8px_rgba(16,185,129,0.2)]'
+                              ? 'bg-white/[0.06] text-white border-white/20 shadow-[0_0_8px_rgba(255,255,255,0.2)]'
                               : 'bg-neutral-900/40 text-neutral-500 border-neutral-850'
                           }`}>
                             {isDone ? 'COMPLETO' : 'PENDENTE'}
@@ -1649,7 +1662,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                           <div className={`mt-3 p-2.5 rounded-lg border text-[8px] leading-relaxed italic ${
                             theme === 'light' ? 'bg-neutral-50 border-neutral-150 text-neutral-600' : 'bg-black/40 border-neutral-905 text-neutral-450'
                           }`}>
-                            <div className="flex justify-between items-center not-italic font-bold text-[6.5px] tracking-wider text-emerald-400 uppercase mb-1">
+                            <div className="flex justify-between items-center not-italic font-bold text-[6.5px] tracking-wider text-white uppercase mb-1">
                               <span>SEU RELATO DIÁRIO:</span>
                               <span>ESFORÇO: {dayFeedbackObj.effort}/10 ({dayFeedbackObj.feeling})</span>
                             </div>
@@ -1664,7 +1677,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                               setSelectedDay(day);
                               setViewMode('DIARIO');
                             }}
-                            className="flex-1 py-1.5 font-mono text-[7.5px] font-bold tracking-widest rounded border border-emerald-500/40 hover:bg-emerald-500 hover:text-black transition-all text-center cursor-pointer uppercase text-emerald-400 hover:border-emerald-500"
+                            className="flex-1 py-1.5 font-mono text-[7.5px] font-bold tracking-widest rounded border border-white/20 hover:bg-white hover:text-black transition-all text-center cursor-pointer uppercase text-white hover:border-white"
                           >
                             LANCAR GPS / FEEDBACKS DO DIA
                           </button>
@@ -1680,14 +1693,152 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
               {/* 8. ACCESS COMPLEMENTARY STATS OVERLAY BUTTON */}
               <button
                 onClick={() => setIsStatsOpen(true)}
-                className={`w-full border hover:border-emerald-500 hover:text-emerald-600 hover:bg-emerald-50/10 py-4 px-6 font-mono font-bold tracking-[0.25em] text-[9.5px] flex items-center justify-center gap-2.5 rounded-xl mt-4 transition-all cursor-pointer shadow-xs uppercase ${
+                className={`w-full border hover:border-white/30 hover:text-white hover:bg-white/[0.04] py-4 px-6 font-mono font-bold tracking-[0.25em] text-[9.5px] flex items-center justify-center gap-2.5 rounded-xl mt-4 transition-all cursor-pointer shadow-xs uppercase ${
                   theme === 'light' ? 'bg-neutral-50 border-neutral-200 text-neutral-700' : 'bg-neutral-900/40 border-neutral-800 text-neutral-300'
                 }`}
                 id="btn-open-weekly-statistics"
               >
-                <TrendingUp className="w-4 h-4 text-emerald-500" />
+                <TrendingUp className="w-4 h-4 text-white" />
                 DADOS DE RENDIMENTO &amp; TELEMETRIA
               </button>
+
+              </div>
+
+              {/* RIGHT COLUMN: REAL-TIME TELEMETRY GRAPH HUD (Desktop only bento pane) */}
+              <div className="hidden lg:flex lg:col-span-3 flex-col gap-4">
+                
+                {/* 1. COMPREHENSIVE PERFORMANCE RADIAL HUD */}
+                <div className={`p-5 rounded-2xl border flex flex-col items-center justify-center gap-4 relative overflow-hidden transition-all duration-300 ${
+                  theme === 'light' ? 'bg-white border-neutral-200' : 'bg-[#030305]/60 border-neutral-900 shadow-xl'
+                }`}>
+                  <div className="flex gap-1.5 items-center w-full border-b pb-2 border-neutral-200/50 dark:border-neutral-900/60">
+                    <TrendingUp className="w-3.5 h-3.5 text-white animate-pulse" />
+                    <span className="text-[8px] font-mono font-bold tracking-[0.2em] text-neutral-400 uppercase">
+                      TELEMETRIA DE ADERÊNCIA
+                    </span>
+                  </div>
+
+                  {/* High performance circular track */}
+                  <div className="relative w-24 h-24 flex items-center justify-center">
+                    <svg className="absolute w-full h-full -rotate-90" viewBox="0 0 100 100">
+                      <circle 
+                        cx="50" 
+                        cy="50" 
+                        r="41" 
+                        stroke={theme === 'light' ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.02)'} 
+                        strokeWidth="5" 
+                        fill="transparent" 
+                      />
+                      <motion.circle 
+                        cx="50" 
+                        cy="50" 
+                        r="41" 
+                        stroke="#ffffff"
+                        strokeWidth="5.5" 
+                        fill="transparent" 
+                        strokeDasharray="257.6"
+                        initial={{ strokeDashoffset: 257.6 }}
+                        animate={{ strokeDashoffset: 257.6 - (257.6 * consistencyPercentage) / 100 }}
+                        transition={{ duration: 0.9, ease: 'easeOut' }}
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    <div className="flex flex-col items-center justify-center text-center z-10">
+                      <span className="text-xl font-bold tracking-tight text-white [text-shadow:0_0_8px_rgba(255,255,255,0.3)]">
+                        {consistencyPercentage}%
+                      </span>
+                      <span className="text-[6.5px] font-mono font-bold text-neutral-500 uppercase">
+                        SINCRO
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="text-center w-full">
+                    <span className="text-[7.5px] font-mono tracking-widest text-white block uppercase font-bold">CADÊNCIA SEMANAL</span>
+                    <span className={`text-xs font-black block mt-0.5 ${theme === 'light' ? 'text-neutral-900' : 'text-zinc-100'}`}>
+                      {completedDaysCount} de 5 Dias Concluídos
+                    </span>
+                  </div>
+                </div>
+
+                {/* 2. Pace Zone Chart Metrics */}
+                <div className={`p-4 border rounded-2xl flex flex-col gap-3 transition-colors ${
+                  theme === 'light' ? 'bg-white border-neutral-200' : 'bg-[#030305]/60 border-neutral-900 shadow-xl'
+                }`}>
+                  <span className="text-[8.5px] font-mono tracking-[0.25em] text-neutral-400 font-bold uppercase block border-b pb-2 border-neutral-200/50 dark:border-neutral-900/60 font-mono">
+                    ESTÍMULOS DESIGNÁVEIS
+                  </span>
+
+                  <div className="space-y-2 text-[8px] font-mono leading-none">
+                    {/* Z1 */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between uppercase text-neutral-400 text-[7.5px] font-mono">
+                        <span>Z1 - REGENERATIVO</span>
+                        <span>80%</span>
+                      </div>
+                      <div className="w-full h-1 bg-neutral-900 rounded-full overflow-hidden border border-neutral-850">
+                        <div className="h-full bg-zinc-400 rounded-full" style={{ width: '80%' }}></div>
+                      </div>
+                    </div>
+                    {/* Z2 */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between uppercase text-white font-bold text-[7.5px] font-mono">
+                        <span>Z2 - AERÓBIO CONTÍNUO</span>
+                        <span className="animate-pulse">45%</span>
+                      </div>
+                      <div className="w-full h-1 bg-neutral-900 rounded-full overflow-hidden border border-neutral-850">
+                        <div className="h-full bg-white rounded-full shadow-[0_0_8px_rgba(255,255,255,0.5)]" style={{ width: '45%' }}></div>
+                      </div>
+                    </div>
+                    {/* Z3 */}
+                    <div className="space-y-1">
+                      <div className="flex justify-between uppercase text-neutral-400 text-[7.5px] font-mono">
+                        <span>Z3 - RITMO MEIO FIRME</span>
+                        <span>25%</span>
+                      </div>
+                      <div className="w-full h-1 bg-neutral-900 rounded-full overflow-hidden border border-neutral-850">
+                        <div className="h-full bg-zinc-500 rounded-full" style={{ width: '25%' }}></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. FULL ACTIVITY LOGS SUMMARY CARDS */}
+                <div className={`p-4 border rounded-2xl flex flex-col gap-2.5 transition-colors ${
+                  theme === 'light' ? 'bg-white border-neutral-200 shadow-xs' : 'bg-[#030305]/75 border-neutral-900'
+                }`}>
+                  <span className="text-[8.5px] font-mono tracking-[0.25em] text-white font-bold block uppercase border-b pb-2 border-neutral-250 dark:border-neutral-900/60 font-mono">
+                    HISTÓRICO SENSORIAL GERAL
+                  </span>
+                  {activityLogs.length === 0 ? (
+                    <p className="text-[8px] text-neutral-500 uppercase leading-relaxed font-mono">
+                      Nenhuma sessão gravada no histórico. Utilize o simulador de GPS do painel central.
+                    </p>
+                  ) : (
+                    <div className="max-h-[160px] overflow-y-auto space-y-1.5 scrollbar-thin pr-1 font-mono">
+                      {activityLogs.slice().reverse().map((log) => (
+                        <div 
+                          key={log.id} 
+                          className={`p-2 rounded-lg border flex flex-col gap-1 text-[8.5px] ${
+                            theme === 'light' ? 'bg-neutral-55 border-neutral-200' : 'bg-black/60 border-neutral-900/40'
+                          }`}
+                        >
+                          <div className="flex justify-between items-center font-bold">
+                            <span className="text-white">CORRIDA {log.day}</span>
+                            <span className="text-neutral-500 text-[7px]">{log.timestamp}</span>
+                          </div>
+                          <div className="flex justify-between text-neutral-450 text-[7.5px]">
+                            <span>{log.distance.toFixed(2)} KM</span>
+                            <span>{Math.floor(log.seconds / 60)}m {(log.seconds % 60)}s</span>
+                            <span className="text-white font-bold">{log.pace}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+              </div>
 
             </motion.div>
           ) : (
@@ -1705,15 +1856,15 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                 theme === 'light' ? 'liquid-glass-light text-neutral-955 shadow-lg' : 'liquid-glass'
               }`}>
                 
-                {/* Premium user identity element with emerald glow feedback */}
+                {/* Premium user identity element with silver glow feedback */}
                 <div 
-                  className={`relative w-24 h-24 border rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.15)] ring-1 ring-emerald-400/20 ${
-                    theme === 'light' ? 'bg-white border-emerald-550' : 'bg-black/40 border-emerald-500/80'
+                  className={`relative w-24 h-24 border rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(255,255,255,0.06)] ring-1 ring-white/10 ${
+                    theme === 'light' ? 'bg-white border-neutral-300' : 'bg-black/40 border-neutral-850'
                   }`}
                   id="profile-avatar-lockup"
                 >
-                  <User className="w-10 h-10 text-emerald-500 stroke-[1.25]" />
-                  <div className="absolute bottom-0 right-0 w-6 h-6 bg-emerald-500 border border-black rounded-full flex items-center justify-center text-[8px] font-black text-black font-mono shadow-[0_0_8px_#10b981]">
+                  <User className="w-10 h-10 text-white stroke-[1.25]" />
+                  <div className="absolute bottom-0 right-0 w-6 h-6 bg-white border border-black rounded-full flex items-center justify-center text-[8px] font-black text-black font-mono shadow-[0_0_8px_rgba(255,255,255,0.45)]">
                     A3
                   </div>
                 </div>
@@ -1731,7 +1882,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                     theme === 'light' ? 'bg-white/70 border-neutral-200' : 'bg-black/40 border-white/5 shadow-inner'
                   }`}>
                     <span className="text-[7.5px] font-mono tracking-[0.18em] text-neutral-500 uppercase block">PACE ALVO MEIA</span>
-                    <span className="text-sm font-black font-mono tracking-tight text-emerald-500 block mt-1">4:30 / KM</span>
+                    <span className="text-sm font-black font-mono tracking-tight text-white block mt-1">4:30 / KM</span>
                   </div>
                   <div className={`p-3.5 rounded-xl border text-left transition-all duration-300 hover:scale-[1.02] ${
                     theme === 'light' ? 'bg-white/70 border-neutral-200' : 'bg-black/40 border-white/5 shadow-inner'
@@ -1761,9 +1912,9 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
 
                 {/* Database synchronization message */}
                 <div className={`w-full p-4 border border-dashed rounded-xl text-left ${
-                  theme === 'light' ? 'bg-emerald-50/20 border-emerald-300' : 'bg-black border-dashed border-emerald-900/50'
+                  theme === 'light' ? 'bg-neutral-50 border-neutral-250' : 'bg-black border-dashed border-neutral-850/50'
                 }`}>
-                  <span className="text-[8px] font-mono tracking-[0.25em] text-emerald-500 block mb-1">REGISTRO SÍNCRONO ATIVO</span>
+                  <span className="text-[8px] font-mono tracking-[0.25em] text-white block mb-1">REGISTRO SÍNCRONO ATIVO</span>
                   <p className="text-[9px] font-mono text-neutral-500 leading-relaxed uppercase">
                     SEU TELEFONE CELULAR ESTÁ VINCULADO E TRANSMITE AS MARCAÇÕES EM TEMPO REAL PARA A CENTRAL DE CONTROLE DO TREINADOR.
                   </p>
@@ -1777,11 +1928,11 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                 className={`w-full transition border font-mono font-bold tracking-[0.25em] text-[10px] flex items-center justify-center gap-2 rounded-xl py-4 px-6 uppercase mt-2 cursor-pointer ${
                   theme === 'light' 
                     ? 'bg-neutral-100 hover:bg-neutral-200 active:bg-neutral-300 border-neutral-300 text-neutral-800' 
-                    : 'bg-neutral-950 hover:bg-neutral-900/60 border-neutral-800 hover:border-emerald-500/40 text-neutral-400 hover:text-white'
-                }`}
-                id="btn-account-logout"
-              >
-                <LogOut className="w-4 h-4 text-emerald-500" />
+                  : 'bg-neutral-950 hover:bg-neutral-900/60 border-neutral-800 hover:border-white/20 text-neutral-400 hover:text-white'
+              }`}
+              id="btn-account-logout"
+            >
+              <LogOut className="w-4 h-4 text-white" />
                 CONCLUIR TREINAMENTO // FAZER LOGOUT
               </button>
 
@@ -1835,7 +1986,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
               {/* Title Section */}
               <div className="flex flex-col gap-1 mt-1">
                 <span className="text-[8px] font-mono font-bold tracking-[0.3em] text-neutral-400 flex items-center gap-1.5 uppercase">
-                  <Activity className="w-3.5 h-3.5 text-emerald-500" />
+                  <Activity className="w-3.5 h-3.5 text-white" />
                   RENDIMENTO DA PLANILHA
                 </span>
                 <h2 className={`text-lg font-black italic tracking-widest uppercase mt-1 ${
@@ -1858,7 +2009,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                       cx="50" 
                       cy="50" 
                       r="42" 
-                      stroke="rgba(16,185,129,0.05)" 
+                      stroke="rgba(255,255,255,0.05)" 
                       strokeWidth="5" 
                       fill="transparent" 
                     />
@@ -1866,7 +2017,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                       cx="50" 
                       cy="50" 
                       r="42" 
-                      stroke="#10b981"
+                      stroke="#ffffff"
                       strokeWidth="5.5" 
                       fill="transparent" 
                       strokeDasharray="263.8"
@@ -1879,10 +2030,10 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
 
                   {/* Percentage in high contrast white */}
                   <div className="flex flex-col items-center justify-center text-center z-10">
-                    <span className="text-2xl font-black tracking-widest text-[#10b981] [text-shadow:0_0_10px_rgba(16,185,129,0.35)] leading-none">
+                    <span className="text-2xl font-black tracking-widest text-white [text-shadow:0_0_10px_rgba(255,255,255,0.35)] leading-none">
                       {consistencyPercentage}%
                     </span>
-                    <span className="text-[7px] font-mono tracking-[0.16em] text-emerald-500 font-bold uppercase mt-1">
+                    <span className="text-[7px] font-mono tracking-[0.16em] text-white font-bold uppercase mt-1">
                       ADERÊNCIA
                     </span>
                   </div>
@@ -1942,14 +2093,14 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                 {/* Z2 meter */}
                 <div className="space-y-1 pt-0.5">
                   <div className="flex justify-between items-center text-[8px] font-mono">
-                    <span className="text-emerald-555 font-black uppercase">Z2 ➔ AERÓBIO CONTÍNUO</span>
-                    <span className="text-emerald-600 font-bold">2 Treinos</span>
+                    <span className="text-white font-black uppercase">Z2 ➔ AERÓBIO CONTÍNUO</span>
+                    <span className="text-neutral-400 font-bold">2 Treinos</span>
                   </div>
                   <div className={`w-full h-1.5 rounded-full overflow-hidden border ${
                     theme === 'light' ? 'bg-neutral-200 border-neutral-300' : 'bg-neutral-900 border-neutral-850'
                   }`}>
                     <motion.div 
-                      className="h-full bg-emerald-500 rounded-full opacity-[1] shadow-[0_0_8px_rgba(16,185,129,0.7)]" 
+                      className="h-full bg-white rounded-full opacity-[1] shadow-[0_0_8px_rgba(255,255,255,0.7)]" 
                       initial={{ width: 0 }}
                       animate={{ width: '45%' }}
                       transition={{ duration: 0.6, delay: 0.15 }}
@@ -2087,7 +2238,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
               </button>
 
               <div className="flex items-center gap-2 border-b border-neutral-800/10 dark:border-neutral-800 pb-3">
-                <Database className="w-5 h-5 text-[#0284c7]" />
+                <Database className="w-5 h-5 text-zinc-400" />
                 <div>
                   <h3 className={`text-xs font-black tracking-widest uppercase ${theme === 'light' ? 'text-black' : 'text-white'}`}>Configurar Supabase Cloud</h3>
                   <p className="text-[8px] text-neutral-500 font-bold uppercase mt-0.5">Siga as instruções para ativar sincronização bi-direcional</p>
@@ -2095,13 +2246,13 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
               </div>
 
               <p className="leading-relaxed text-[9px]">
-                O seu aplicativo do atleta e painel do treinador já estão vinculados à API do Supabase (<span className="text-sky-500 font-bold">{(supabaseUrl || 'https://kgmnvjhyuhpxglpsvpnz.supabase.co').replace('https://', '').split('.')[0]}</span>).
+                O seu aplicativo do atleta e painel do treinador já estão vinculados à API do Supabase (<span className="text-zinc-350 font-bold">{(supabaseUrl || 'https://kgmnvjhyuhpxglpsvpnz.supabase.co').replace('https://', '').split('.')[0]}</span>).
               </p>
               
-              <div className="bg-sky-500/10 border border-sky-500/25 rounded-xl p-3 flex gap-2 text-sky-500 text-[9px]">
-                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-sky-400" />
+              <div className="bg-zinc-850/40 border border-zinc-800/60 rounded-xl p-3 flex gap-2 text-zinc-300 text-[9px]">
+                <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-zinc-400" />
                 <p className="leading-relaxed font-semibold">
-                  A tabela <code className="bg-sky-950/40 border border-sky-900 px-1 py-0.5 rounded text-white text-[8px]">athlete_sync</code> está ausente ou ainda não foi criada. Copie o script SQL abaixo, acesse o painel de controle do Supabase, cole no <strong className={theme === 'light' ? 'text-[#19191b]' : 'text-white'}>SQL Editor</strong> do projeto e clique em <strong className={theme === 'light' ? 'text-[#19191b]' : 'text-white'}>Run</strong>.
+                  A tabela <code className="bg-zinc-900 border border-zinc-800 px-1 py-0.5 rounded text-white text-[8px]">athlete_sync</code> está ausente ou ainda não foi criada. Copie o script SQL abaixo, acesse o painel de controle do Supabase, cole no <strong className={theme === 'light' ? 'text-[#19191b]' : 'text-white'}>SQL Editor</strong> do projeto e clique em <strong className={theme === 'light' ? 'text-[#19191b]' : 'text-white'}>Run</strong>.
                 </p>
               </div>
 
@@ -2114,7 +2265,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                       setCopiedSql(true);
                       setTimeout(() => setCopiedSql(false), 2000);
                     }}
-                    className="flex items-center gap-1.5 px-2 py-1 rounded bg-[#10b981] hover:bg-emerald-400 text-[8px] font-black text-[#000] uppercase tracking-wider cursor-pointer transition"
+                    className="flex items-center gap-1.5 px-2 py-1 rounded bg-white hover:bg-neutral-200 text-[8px] font-black text-[#000] uppercase tracking-wider cursor-pointer transition"
                   >
                     {copiedSql ? (
                       <>
@@ -2130,7 +2281,7 @@ export default function AthleteWorkspace({ athleteName, onBack, theme, setTheme 
                   </button>
                 </div>
 
-                <pre className="p-3 bg-neutral-950 border border-neutral-900 rounded-xl overflow-x-auto text-[8px] text-[#10b981] font-mono leading-relaxed max-h-48 whitespace-pre">
+                <pre className="p-3 bg-neutral-950 border border-neutral-900 rounded-xl overflow-x-auto text-[8px] text-zinc-300 font-mono leading-relaxed max-h-48 whitespace-pre">
                   {SUPABASE_BOOTSTRAP_SQL}
                 </pre>
               </div>

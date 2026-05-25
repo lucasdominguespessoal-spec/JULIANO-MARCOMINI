@@ -105,7 +105,10 @@ export default function TrainerDashboardSimulator({
     const saved = localStorage.getItem('TRAINER_PROFILE_DATA');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          return parsed;
+        }
       } catch (e) {}
     }
     return {
@@ -339,9 +342,9 @@ Gerado eletronicamente via Livelink Simulator.
           status: 'Em andamento',
           adherencePct: athleteAdherence.lucas || 60,
           days: ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB', 'DOM'].map((day) => {
-            const dayState = lucasWorkoutStates[day] || { warmup: 'PENDENTE', mainSet: 'PENDENTE', coolDown: 'PENDENTE' };
-            const dayFeedback = lucasFeedbacks[day] || { comment: '', effort: 5, feeling: 'BOM' };
-            const dayPrescription = planilhaForm.prescriptions[day] || { title: `${day} - TREINO` };
+            const dayState = (lucasWorkoutStates && lucasWorkoutStates[day]) || { warmup: 'PENDENTE', mainSet: 'PENDENTE', coolDown: 'PENDENTE' };
+            const dayFeedback = (lucasFeedbacks && lucasFeedbacks[day]) || { comment: '', effort: 5, feeling: 'BOM' };
+            const dayPrescription = (planilhaForm?.prescriptions && planilhaForm.prescriptions[day]) || { title: `${day} - TREINO` };
             
             return {
               day,
@@ -623,25 +626,39 @@ Gerado eletronicamente via Livelink Simulator.
     if (savedStates) {
       try {
         const parsed = JSON.parse(savedStates);
-        setLucasWorkoutStates(parsed);
-        let checkedCount = 0;
-        let totalCount = 0;
-        Object.values(parsed).forEach((dayState: any) => {
-          if (dayState.warmup === 'CONCLUÍDO') checkedCount++;
-          if (dayState.mainSet === 'CONCLUÍDO') checkedCount++;
-          if (dayState.coolDown === 'CONCLUÍDO') checkedCount++;
-          
-          if (dayState.warmup === 'ADAPTADO') checkedCount += 0.5;
-          if (dayState.mainSet === 'ADAPTADO') checkedCount += 0.5;
-          if (dayState.coolDown === 'ADAPTADO') checkedCount += 0.5;
-          
-          totalCount += 3;
-        });
-        const pct = totalCount > 0 ? Math.round((checkedCount / totalCount) * 100) : 60;
-        setAthleteAdherence(prev => ({
-          ...prev,
-          [selectedAthleteId]: pct
-        }));
+        if (parsed && typeof parsed === 'object') {
+          setLucasWorkoutStates(parsed);
+          let checkedCount = 0;
+          let totalCount = 0;
+          Object.values(parsed).forEach((dayState: any) => {
+            if (dayState && typeof dayState === 'object') {
+              if (dayState.warmup === 'CONCLUÍDO') checkedCount++;
+              if (dayState.mainSet === 'CONCLUÍDO') checkedCount++;
+              if (dayState.coolDown === 'CONCLUÍDO') checkedCount++;
+              
+              if (dayState.warmup === 'ADAPTADO') checkedCount += 0.5;
+              if (dayState.mainSet === 'ADAPTADO') checkedCount += 0.5;
+              if (dayState.coolDown === 'ADAPTADO') checkedCount += 0.5;
+              
+              totalCount += 3;
+            }
+          });
+          const pct = totalCount > 0 ? Math.round((checkedCount / totalCount) * 100) : 60;
+          setAthleteAdherence(prev => ({
+            ...prev,
+            [selectedAthleteId]: pct
+          }));
+        } else {
+          setLucasWorkoutStates({
+            SEG: { warmup: 'PENDENTE', mainSet: 'PENDENTE', coolDown: 'PENDENTE' },
+            TER: { warmup: 'PENDENTE', mainSet: 'PENDENTE', coolDown: 'PENDENTE' },
+            QUA: { warmup: 'PENDENTE', mainSet: 'PENDENTE', coolDown: 'PENDENTE' },
+            QUI: { warmup: 'PENDENTE', mainSet: 'PENDENTE', coolDown: 'PENDENTE' },
+            SEX: { warmup: 'PENDENTE', mainSet: 'PENDENTE', coolDown: 'PENDENTE' },
+            SAB: { warmup: 'PENDENTE', mainSet: 'PENDENTE', coolDown: 'PENDENTE' },
+            DOM: { warmup: 'PENDENTE', mainSet: 'PENDENTE', coolDown: 'PENDENTE' }
+          });
+        }
       } catch (e) {}
     } else {
       setLucasWorkoutStates({
@@ -659,7 +676,11 @@ Gerado eletronicamente via Livelink Simulator.
     if (savedFeedbacks) {
       try {
         const parsed = JSON.parse(savedFeedbacks);
-        setLucasFeedbacks(parsed);
+        if (parsed && typeof parsed === 'object') {
+          setLucasFeedbacks(parsed);
+        } else {
+          setLucasFeedbacks({});
+        }
       } catch (e) {}
     } else {
       setLucasFeedbacks({});
@@ -949,7 +970,8 @@ Gerado eletronicamente via Livelink Simulator.
 
   // Modify daily details
   const updatePrescriptionField = (day: string, field: keyof DayPrescription, val: string) => {
-    const dayData = planilhaForm.prescriptions[day] || {
+    const prescriptions = planilhaForm.prescriptions || {};
+    const dayData = prescriptions[day] || {
       title: `${day} - TREINO`,
       badge: "CORRIDA PRESCRITA",
       subBadge: "ZONAS DE TREINAMENTO",
@@ -961,7 +983,7 @@ Gerado eletronicamente via Livelink Simulator.
     setPlanilhaForm(prev => ({
       ...prev,
       prescriptions: {
-        ...prev.prescriptions,
+        ...(prev.prescriptions || {}),
         [day]: {
           ...dayData,
           [field]: val
@@ -971,8 +993,8 @@ Gerado eletronicamente via Livelink Simulator.
   };
 
   return (
-    <div className={`relative w-full min-h-screen transition-colors duration-300 flex flex-col justify-between p-4 ${
-      theme === 'light' ? 'bg-[#f5f5f7] text-[#1c1c1e]' : 'bg-[#000000] text-white'
+    <div className={`relative w-full min-h-screen transition-all duration-300 flex flex-col justify-between p-4 ${
+      theme === 'light' ? 'bg-[#f5f5f7]/40 text-[#1c1c1e]' : 'bg-black/40 text-white'
     }`} id="trainer-dashboard-root">
       
       {/* INTERACTIVE TRAINER PROFILE EDITOR MODAL */}
@@ -1013,7 +1035,7 @@ Gerado eletronicamente via Livelink Simulator.
                     className={`w-full px-2.5 py-2 text-[10px] border rounded focus:outline-none uppercase ${
                       theme === 'light' 
                         ? 'bg-neutral-50 border-neutral-300 text-neutral-900 focus:border-neutral-500' 
-                        : 'bg-black border-neutral-850 text-white focus:border-emerald-500'
+                        : 'bg-black border-neutral-850 text-white focus:border-white'
                     }`}
                   />
                 </div>
@@ -1027,7 +1049,7 @@ Gerado eletronicamente via Livelink Simulator.
                     className={`w-full px-2.5 py-2 text-[10px] border rounded focus:outline-none uppercase ${
                       theme === 'light' 
                         ? 'bg-neutral-50 border-neutral-300 text-neutral-900 focus:border-neutral-500' 
-                        : 'bg-black border-neutral-850 text-white focus:border-emerald-500'
+                        : 'bg-black border-neutral-850 text-white focus:border-white'
                     }`}
                   />
                 </div>
@@ -1041,7 +1063,7 @@ Gerado eletronicamente via Livelink Simulator.
                     className={`w-full p-2 text-[10px] border rounded focus:outline-none uppercase resize-none ${
                       theme === 'light' 
                         ? 'bg-neutral-50 border-neutral-300 text-neutral-900 focus:border-neutral-500' 
-                        : 'bg-black border-neutral-850 text-white focus:border-emerald-500'
+                        : 'bg-black border-neutral-850 text-white focus:border-white'
                     }`}
                   />
                 </div>
@@ -1056,7 +1078,7 @@ Gerado eletronicamente via Livelink Simulator.
                       className={`w-full px-2.5 py-2 text-[10px] border rounded focus:outline-none uppercase ${
                         theme === 'light' 
                           ? 'bg-neutral-50 border-neutral-300 text-neutral-900 focus:border-neutral-500' 
-                          : 'bg-black border-neutral-850 text-white focus:border-emerald-500'
+                          : 'bg-black border-neutral-850 text-white focus:border-white'
                       }`}
                     />
                   </div>
@@ -1070,7 +1092,7 @@ Gerado eletronicamente via Livelink Simulator.
                       className={`w-full px-2.5 py-2 text-[10px] border rounded focus:outline-none uppercase ${
                         theme === 'light' 
                           ? 'bg-neutral-50 border-neutral-300 text-neutral-900 focus:border-neutral-500' 
-                          : 'bg-black border-neutral-850 text-white focus:border-emerald-500'
+                          : 'bg-black border-neutral-800 text-white focus:border-white'
                       }`}
                     />
                   </div>
@@ -1090,7 +1112,7 @@ Gerado eletronicamente via Livelink Simulator.
                 <button 
                   type="button"
                   onClick={handleSaveProfile}
-                  className="px-4 py-2 bg-emerald-600 text-white font-bold rounded uppercase transition-colors hover:bg-emerald-550 cursor-pointer"
+                  className="px-4 py-2 bg-white text-black font-extrabold rounded uppercase hover:bg-neutral-200 cursor-pointer transition-colors"
                 >
                   Salvar Alterações
                 </button>
@@ -1114,14 +1136,14 @@ Gerado eletronicamente via Livelink Simulator.
           >
             <div className="w-full max-w-xs space-y-6 text-center">
               <div className="relative mx-auto w-16 h-16 flex items-center justify-center">
-                <div className="absolute inset-0 rounded-full border border-emerald-500/30 animate-ping" />
-                <div className="w-12 h-12 rounded-full bg-emerald-950/40 border border-emerald-500 flex items-center justify-center text-emerald-400">
+                <div className="absolute inset-0 rounded-full border border-white/20 animate-ping" />
+                <div className="w-12 h-12 rounded-full bg-white/[0.04] border border-white flex items-center justify-center text-white">
                   <Send className="w-5 h-5 animate-pulse" />
                 </div>
               </div>
               
               <div className="space-y-2">
-                <span className="text-[8px] font-mono tracking-[0.3em] text-emerald-500 uppercase font-black block">TRANSMISSÃO TELEMÉTRICA</span>
+                <span className="text-[8px] font-mono tracking-[0.3em] text-white uppercase font-black block">TRANSMISSÃO TELEMÉTRICA</span>
                 <p className={`text-[10px] font-mono min-h-8 px-2 font-medium ${
                   theme === 'light' ? 'text-neutral-600' : 'text-neutral-400'
                 }`}>
@@ -1139,7 +1161,7 @@ Gerado eletronicamente via Livelink Simulator.
                   theme === 'light' ? 'bg-neutral-200 border-neutral-300' : 'bg-neutral-900 border-neutral-950'
                 }`}>
                   <motion.div 
-                    className="h-full bg-emerald-500 shadow-[0_0_8px_#10b981]"
+                    className="h-full bg-white shadow-[0_0_8px_rgba(255,255,255,0.6)]"
                     animate={{ width: `${broadcastProgress}%` }}
                     transition={{ duration: 0.3 }}
                   />
@@ -1157,7 +1179,7 @@ Gerado eletronicamente via Livelink Simulator.
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="fixed top-5 left-1/2 -translate-x-1/2 z-40 bg-emerald-900 border border-emerald-500 text-emerald-100 font-mono text-[9px] font-bold py-2.5 px-4 tracking-widest uppercase rounded-lg shadow-lg flex items-center gap-2"
+            className="fixed top-5 left-1/2 -translate-x-1/2 z-40 bg-[#161618] border border-neutral-750 text-white font-mono text-[9px] font-bold py-2.5 px-4 tracking-widest uppercase rounded-lg shadow-lg flex items-center gap-2"
           >
             <Award className="w-3.5 h-3.5" />
             Sincronizado &amp; Publicado com Sucesso!
@@ -1172,7 +1194,7 @@ Gerado eletronicamente via Livelink Simulator.
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 selection:bg-emerald-950 font-mono"
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 selection:bg-neutral-850 font-mono"
             id="athlete-report-modal"
           >
             <motion.div 
@@ -1185,7 +1207,7 @@ Gerado eletronicamente via Livelink Simulator.
             >
               <div className="flex justify-between items-center border-b pb-3 border-neutral-200 dark:border-neutral-850">
                 <div className="flex flex-col">
-                  <span className="text-[7px] text-emerald-500 font-bold tracking-widest uppercase mb-0.5">TELEMETRIA COMPILADA</span>
+                  <span className="text-[7px] text-white font-bold tracking-widest uppercase mb-0.5">TELEMETRIA COMPILADA</span>
                   <span className="text-xs font-black tracking-widest uppercase">RELATÓRIO DE EVOLUÇÃO</span>
                 </div>
                 <button 
@@ -1211,7 +1233,7 @@ Gerado eletronicamente via Livelink Simulator.
                 <div className="grid grid-cols-2 gap-y-2 gap-x-3 text-[8.5px]">
                   <div>
                     <span className="text-neutral-500 block uppercase font-bold text-[6.5px]">Pace Esperado (Meta)</span>
-                    <span className="font-extrabold text-emerald-500">{selectedAthlete.targetPace} / km</span>
+                    <span className="font-extrabold text-white">{selectedAthlete.targetPace} / km</span>
                   </div>
                   <div>
                     <span className="text-neutral-500 block uppercase font-bold text-[6.5px]">Pace Real do Ciclo</span>
@@ -1219,7 +1241,7 @@ Gerado eletronicamente via Livelink Simulator.
                   </div>
                   <div>
                     <span className="text-neutral-500 block uppercase font-bold text-[6.5px]">Aderência Mensurada</span>
-                    <span className="font-extrabold text-emerald-500">{athleteAdherence[selectedAthlete.id] || 0}%</span>
+                    <span className="font-extrabold text-white">{athleteAdherence[selectedAthlete.id] || 0}%</span>
                   </div>
                   <div>
                     <span className="text-neutral-500 block uppercase font-bold text-[6.5px]">Volume Acumulado</span>
@@ -1244,7 +1266,7 @@ Gerado eletronicamente via Livelink Simulator.
               <div className="flex flex-col gap-1.5 mt-2">
                 <button
                   onClick={() => handleCopyReportText(selectedAthlete)}
-                  className="w-full py-2.5 px-4 font-mono font-black tracking-widest text-[9px] rounded-lg text-black bg-emerald-400 hover:bg-emerald-350 active:scale-98 transition-all flex items-center justify-center gap-1.5 cursor-pointer uppercase"
+                  className="w-full py-2.5 px-4 font-mono font-black tracking-widest text-[9px] rounded-lg text-black bg-white hover:bg-neutral-200 active:scale-98 transition-all flex items-center justify-center gap-1.5 cursor-pointer uppercase"
                 >
                   {reportCopied ? '✓ COPIADO COM SUCESSO!' : 'COPIAR TEXTO DO RELATÓRIO'}
                 </button>
@@ -1296,7 +1318,7 @@ Gerado eletronicamente via Livelink Simulator.
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 selection:bg-emerald-950 font-mono"
+              className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 selection:bg-neutral-850 font-mono"
               id="athlete-chart-modal"
             >
               <motion.div 
@@ -1309,7 +1331,7 @@ Gerado eletronicamente via Livelink Simulator.
               >
                 <div className="flex justify-between items-center border-b pb-3 border-neutral-200 dark:border-neutral-850">
                   <div className="flex flex-col">
-                    <span className="text-[7px] text-emerald-500 font-bold tracking-widest uppercase mb-0.5">TELEMETRIA PROGRESSIVA</span>
+                    <span className="text-[7px] text-white font-bold tracking-widest uppercase mb-0.5">TELEMETRIA PROGRESSIVA</span>
                     <span className="text-xs font-black tracking-widest uppercase">GRAFICO DE EVOLUÇÃO</span>
                   </div>
                   <button 
@@ -1351,7 +1373,7 @@ Gerado eletronicamente via Livelink Simulator.
                       {fillD && <path d={fillD} fill="url(#chart-fill-grad)" />}
 
                       {/* PATH LINE */}
-                      {pathD && <path d={pathD} fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
+                      {pathD && <path d={pathD} fill="none" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
 
                       {/* DATA INTERACTIVE KNOB DOTS */}
                       {points.map((p) => {
@@ -1362,7 +1384,7 @@ Gerado eletronicamente via Livelink Simulator.
                               cx={p.x} 
                               cy={p.y} 
                               r={isSelected ? 10 : 7} 
-                              className="fill-emerald-500/10 pointer-events-auto transition-all"
+                              className="fill-white/10 pointer-events-auto transition-all"
                               onMouseEnter={() => setHoveredPointIndex(p.index)}
                               onClick={() => setHoveredPointIndex(p.index)}
                             />
@@ -1370,7 +1392,7 @@ Gerado eletronicamente via Livelink Simulator.
                               cx={p.x} 
                               cy={p.y} 
                               r={isSelected ? 4 : 3} 
-                              className={`transition-all ${isSelected ? 'fill-emerald-400' : 'fill-emerald-650'}`}
+                              className={`transition-all ${isSelected ? 'fill-white' : 'fill-neutral-550'}`}
                             />
                             {/* Label underneath point */}
                             <text 
@@ -1411,7 +1433,7 @@ Gerado eletronicamente via Livelink Simulator.
                 }`}>
                   <div className="flex justify-between items-center text-[7.5px] uppercase border-b pb-1.5 border-neutral-200 dark:border-neutral-800/80 mb-2">
                     <span className="text-neutral-500 font-bold">CICLO SELECIONADO</span>
-                    <span className="font-extrabold text-emerald-500">{selectedPoint.data.week.toUpperCase()}</span>
+                    <span className="font-extrabold text-white">{selectedPoint.data.week.toUpperCase()}</span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-y-2 text-[8px]">
@@ -1421,7 +1443,7 @@ Gerado eletronicamente via Livelink Simulator.
                     </div>
                     <div>
                       <span className="text-neutral-500 block uppercase font-bold text-[6px]">Aderência Mensurada</span>
-                      <span className="font-black text-emerald-500">{selectedPoint.data.adherence}%</span>
+                      <span className="font-black text-white">{selectedPoint.data.adherence}%</span>
                     </div>
                     <div>
                       <span className="text-neutral-500 block uppercase font-bold text-[6px]">Frequência Cardíaca</span>
@@ -1446,11 +1468,11 @@ Gerado eletronicamente via Livelink Simulator.
       </AnimatePresence>
 
       {/* TOP HEADER STATUS PANEL */}
-      <div className={`flex flex-col gap-3.5 p-4 rounded-xl relative transition-all duration-300 ${
+      <div className={`w-full max-w-sm lg:max-w-6xl mx-auto flex flex-col gap-3.5 p-4 rounded-xl relative transition-all duration-300 ${
         theme === 'light' ? 'liquid-glass-light text-neutral-900 shadow-lg' : 'liquid-glass text-white shadow-2xl'
       }`}>
         {/* Animated fluid scanning line inside header glass container */}
-        <div className="absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-emerald-500/70 to-transparent shadow-[0_0_8px_#10b981]" />
+        <div className="absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r from-transparent via-white/50 to-transparent shadow-[0_0_8px_rgba(255,255,255,0.4)]" />
 
         <div className="flex justify-between items-center pt-0.5 pointer-events-auto">
           <div className="flex flex-col">
@@ -1472,9 +1494,9 @@ Gerado eletronicamente via Livelink Simulator.
           <div className="flex items-center gap-1">
             <span className={`px-1.5 py-0.5 rounded text-[7px] tracking-wider uppercase font-black flex items-center gap-1 transition-colors ${
               supabaseStatus === 'SYNCED' 
-                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30' 
+                ? 'bg-white/10 text-white border border-white/20' 
                 : supabaseStatus === 'LOCAL_ONLY'
-                ? 'bg-sky-500/10 text-sky-450 border border-sky-500/30'
+                ? 'bg-zinc-800/25 text-zinc-300 border border-zinc-750/30'
                 : 'bg-amber-500/10 text-amber-500 border border-amber-500/30'
             }`}>
               <Cloud className="w-2.5 h-2.5" />
@@ -1483,19 +1505,6 @@ Gerado eletronicamente via Livelink Simulator.
           </div>
 
           <div className="flex items-center gap-1.5">
-            {/* Palette button (theme toggle) */}
-            <button
-              onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-              className={`w-8.5 h-8.5 rounded-lg border flex items-center justify-center transition-all duration-300 shadow-xs active:scale-95 cursor-pointer ${
-                theme === 'light' 
-                  ? 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50 hover:text-black hover:border-neutral-350 shadow-neutral-100' 
-                  : 'bg-neutral-950 border-neutral-850 text-neutral-300 hover:bg-neutral-900 hover:text-white hover:border-neutral-750 shadow-none'
-              }`}
-              title="Trocar Tema da Paleta"
-            >
-              <Palette className="w-4 h-4 stroke-[1.8]" />
-            </button>
-
             {/* Profile view/edit button */}
             <button
               onClick={() => setIsProfileModalOpen(true)}
@@ -1533,7 +1542,7 @@ Gerado eletronicamente via Livelink Simulator.
               onClick={() => setActiveTab('MONITOR')}
               className={`py-2 px-1 font-mono font-bold text-[8.5px] tracking-widest rounded-lg transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${
                 activeTab === 'MONITOR' 
-                  ? 'bg-emerald-500 text-black font-black shadow-md' 
+                  ? (theme === 'light' ? 'bg-neutral-950 text-white font-black shadow-md' : 'bg-white text-black font-black shadow-md') 
                   : `${theme === 'light' ? 'text-neutral-700 hover:text-neutral-950 hover:bg-neutral-950/5' : 'text-neutral-350 hover:text-white hover:bg-white/5'}`
               }`}
             >
@@ -1545,7 +1554,7 @@ Gerado eletronicamente via Livelink Simulator.
               onClick={() => setActiveTab('PRESCREVER')}
               className={`py-2 px-1 font-mono font-bold text-[8.5px] tracking-widest rounded-lg transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${
                 activeTab === 'PRESCREVER' 
-                  ? 'bg-emerald-500 text-black font-black shadow-md' 
+                  ? (theme === 'light' ? 'bg-neutral-950 text-white font-black shadow-md' : 'bg-white text-black font-black shadow-md') 
                   : `${theme === 'light' ? 'text-neutral-700 hover:text-neutral-950 hover:bg-neutral-950/5' : 'text-neutral-350 hover:text-white hover:bg-white/5'}`
               }`}
             >
@@ -1557,7 +1566,7 @@ Gerado eletronicamente via Livelink Simulator.
               onClick={() => setActiveTab('FEEDBACK')}
               className={`py-2 px-1 font-mono font-bold text-[8.5px] tracking-widest rounded-lg transition-all duration-300 flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 ${
                 activeTab === 'FEEDBACK' 
-                  ? 'bg-emerald-500 text-black font-black shadow-md' 
+                  ? (theme === 'light' ? 'bg-neutral-950 text-white font-black shadow-md' : 'bg-white text-black font-black shadow-md') 
                   : `${theme === 'light' ? 'text-neutral-700 hover:text-neutral-950 hover:bg-neutral-950/5' : 'text-neutral-350 hover:text-white hover:bg-white/5'}`
               }`}
             >
@@ -1568,9 +1577,12 @@ Gerado eletronicamente via Livelink Simulator.
         ) : null}
       </div>
 
-      {/* TAB 1: RUNNERS METRICS & SELECTION INDEX */}
-      {activeTab === 'MONITOR' && athletes.length > 0 && (
-        <div className="flex-grow flex flex-col gap-4 mt-4" id="monitor-content-area">
+      {/* 4. MAIN SCIENTIFIC WORKSPACE COMMAND CONSOLE */}
+      {athletes.length > 0 && (
+        <div className="flex-grow w-full max-w-sm lg:max-w-6xl mx-auto flex flex-col lg:grid lg:grid-cols-12 lg:gap-5 mt-4 pb-4" id="main-scientific-workspace-command-console">
+
+          {/* COLUMN 1: ATHLETE SELECTION LIST RAIL (Desktop persistent, Mobile conditional) */}
+          <div className={`flex-grow flex flex-col gap-4 lg:col-span-4 ${activeTab === 'MONITOR' ? 'flex' : 'hidden lg:flex'}`} id="monitor-content-area">
           <div className={`flex justify-between items-center text-[8.5px] font-mono tracking-widest uppercase ${
             theme === 'light' ? 'text-neutral-600' : 'text-neutral-500'
           }`}>
@@ -1601,15 +1613,17 @@ Gerado eletronicamente via Livelink Simulator.
                     }}
                     className={`px-5 py-4 transition-all duration-300 cursor-pointer flex items-center justify-between group active:scale-[0.99] ${
                       isSelected
-                        ? (theme === 'light' ? 'bg-emerald-500/10 text-[#047857] font-black' : 'bg-emerald-500/10 text-emerald-400 font-extrabold shadow-inner')
+                        ? (theme === 'light' ? 'bg-neutral-950 text-white font-black' : 'bg-white text-black font-extrabold shadow-inner')
                         : (theme === 'light' ? 'hover:bg-neutral-950/5 text-neutral-800' : 'hover:bg-white/5 text-neutral-200')
                     }`}
                   >
-                    <span className="font-mono text-[10.5px] tracking-widest uppercase group-hover:text-emerald-500 transition-colors">
+                    <span className={`font-mono text-[10.5px] tracking-widest uppercase transition-colors ${
+                      isSelected ? (theme === 'light' ? 'text-white' : 'text-black') : ''
+                    }`}>
                       {ath.name}
                     </span>
-                    <span className={`text-[9px] group-hover:text-emerald-500 tracking-wider transition-all font-bold ${
-                      theme === 'light' ? 'text-neutral-500 font-medium' : 'text-neutral-400'
+                    <span className={`text-[9px] tracking-wider transition-all font-bold ${
+                      theme === 'light' ? (isSelected ? 'text-white' : 'text-neutral-500 font-medium') : (isSelected ? 'text-black' : 'text-neutral-400')
                     }`}>
                       {isSelected ? '✓ SELECIONADO ➔' : 'SELECIONAR ➔'}
                     </span>
@@ -1617,12 +1631,10 @@ Gerado eletronicamente via Livelink Simulator.
                 );
               })}
           </div>
-        </div>
-      )}
+          </div>
 
-      {/* TAB 2: STRUCTURAL TRAINING PRESCRIPTION ENGINE */}
-      {activeTab === 'PRESCREVER' && athletes.length > 0 && (
-        <div className="flex-grow flex flex-col gap-4 mt-4" id="prescribir-content-area">
+          {/* COLUMN 2: STRUCTURAL TRAINING PRESCRIPTION ENGINE (Desktop persistent, Mobile conditional) */}
+          <div className={`flex-grow flex flex-col gap-4 lg:col-span-5 ${activeTab === 'PRESCREVER' ? 'flex' : 'hidden lg:flex'}`} id="prescribir-content-area">
           
           {/* Athlete Profile Summary configuration indicators */}
           <div className={`p-5 flex flex-col gap-4 transition-all duration-300 rounded-2xl liquid-sheen ${
@@ -1636,71 +1648,71 @@ Gerado eletronicamente via Livelink Simulator.
 
             <div className="grid grid-cols-2 gap-3 text-[9px] font-mono p-1">
               <div className="space-y-1">
-                <label className={`${theme === 'light' ? 'text-neutral-500 font-bold block' : 'text-neutral-450 font-bold block'}`}>NOME DO ATLETA</label>
+                <label className="text-[7.5px] font-mono tracking-wider text-neutral-500 dark:text-neutral-450 font-bold block uppercase mb-0.5">NOME DO ATLETA</label>
                 <input 
                   type="text"
                   value={planilhaForm.athleteName}
                   onChange={(e) => updateGeneralField('athleteName', e.target.value)}
-                  className={`px-3 py-2 w-full text-[10px] rounded focus:outline-none uppercase font-mono tracking-wide ${
+                  className={`px-2.5 py-1.5 w-full text-[9px] rounded-lg focus:outline-none uppercase font-mono tracking-wider compact-input transition-all ${
                     theme === 'light' 
-                      ? 'bg-neutral-50 border border-neutral-250 text-neutral-950 focus:border-neutral-500' 
-                      : 'bg-black border border-neutral-850 text-white focus:border-emerald-500'
+                      ? 'bg-neutral-900/[0.03] hover:bg-neutral-900/[0.05] border border-neutral-950/[0.06] focus:border-neutral-950/20 text-neutral-950' 
+                      : 'bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.05] focus:border-white/25 text-white'
                   }`}
                 />
               </div>
 
               <div className="space-y-1">
-                <label className={`${theme === 'light' ? 'text-neutral-500 font-bold block' : 'text-neutral-450 font-bold block'}`}>MODELO / ESPORTE</label>
+                <label className="text-[7.5px] font-mono tracking-wider text-neutral-500 dark:text-neutral-450 font-bold block uppercase mb-0.5">MODELO / ESPORTE</label>
                 <input 
                   type="text"
                   value={planilhaForm.modalidade}
                   onChange={(e) => updateGeneralField('modalidade', e.target.value)}
-                  className={`px-3 py-2 w-full text-[10px] rounded focus:outline-none uppercase font-mono tracking-wide ${
+                  className={`px-2.5 py-1.5 w-full text-[9px] rounded-lg focus:outline-none uppercase font-mono tracking-wider compact-input transition-all ${
                     theme === 'light' 
-                      ? 'bg-neutral-50 border border-neutral-250 text-neutral-950 focus:border-neutral-500' 
-                      : 'bg-black border border-neutral-850 text-white focus:border-emerald-500'
+                      ? 'bg-neutral-900/[0.03] hover:bg-neutral-900/[0.05] border border-neutral-950/[0.06] focus:border-neutral-950/20 text-neutral-950' 
+                      : 'bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.05] focus:border-white/25 text-white'
                   }`}
                 />
               </div>
 
               <div className="space-y-1">
-                <label className={`${theme === 'light' ? 'text-neutral-500 font-bold block' : 'text-neutral-450 font-bold block'}`}>VALIDADE / DATA</label>
+                <label className="text-[7.5px] font-mono tracking-wider text-neutral-500 dark:text-neutral-450 font-bold block uppercase mb-0.5">VALIDADE / DATA</label>
                 <input 
                   type="text"
                   value={planilhaForm.semanaTreinamento}
                   onChange={(e) => updateGeneralField('semanaTreinamento', e.target.value)}
-                  className={`px-3 py-2 w-full text-[10px] rounded focus:outline-none uppercase font-mono tracking-wide ${
+                  className={`px-2.5 py-1.5 w-full text-[9px] rounded-lg focus:outline-none uppercase font-mono tracking-wider compact-input transition-all ${
                     theme === 'light' 
-                      ? 'bg-neutral-50 border border-neutral-250 text-neutral-950 focus:border-neutral-500' 
-                      : 'bg-black border border-neutral-850 text-white focus:border-emerald-500'
+                      ? 'bg-neutral-900/[0.03] hover:bg-neutral-900/[0.05] border border-neutral-950/[0.06] focus:border-neutral-950/20 text-neutral-950' 
+                      : 'bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.05] focus:border-white/25 text-white'
                   }`}
                 />
               </div>
 
               <div className="space-y-1">
-                <label className={`${theme === 'light' ? 'text-neutral-500 font-bold block' : 'text-neutral-450 font-bold block'}`}>OBJETIVO DO ALUNO</label>
+                <label className="text-[7.5px] font-mono tracking-wider text-neutral-500 dark:text-neutral-450 font-bold block uppercase mb-0.5">OBJETIVO DO ALUNO</label>
                 <input 
                   type="text"
                   value={planilhaForm.objetivo}
                   onChange={(e) => updateGeneralField('objetivo', e.target.value)}
-                  className={`px-3 py-2 w-full text-[10px] rounded focus:outline-none uppercase font-mono tracking-wide ${
+                  className={`px-2.5 py-1.5 w-full text-[9px] rounded-lg focus:outline-none uppercase font-mono tracking-wider compact-input transition-all ${
                     theme === 'light' 
-                      ? 'bg-neutral-50 border border-neutral-250 text-neutral-950 focus:border-neutral-500' 
-                      : 'bg-black border border-neutral-850 text-white focus:border-emerald-500'
+                      ? 'bg-neutral-900/[0.03] hover:bg-neutral-900/[0.05] border border-neutral-950/[0.06] focus:border-neutral-950/20 text-neutral-950' 
+                      : 'bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.05] focus:border-white/25 text-white'
                   }`}
                 />
               </div>
 
               <div className="col-span-2 space-y-1">
-                <label className={`${theme === 'light' ? 'text-neutral-500 font-bold block' : 'text-neutral-450 font-bold block'}`}>FOCO ATUAL DO MACROCICLO</label>
+                <label className="text-[7.5px] font-mono tracking-wider text-neutral-500 dark:text-neutral-450 font-bold block uppercase mb-0.5">FOCO ATUAL DO MACROCICLO</label>
                 <textarea 
                   rows={2}
                   value={planilhaForm.focoMacrociclo}
                   onChange={(e) => updateGeneralField('focoMacrociclo', e.target.value)}
-                  className={`p-2.5 w-full text-[10px] rounded focus:outline-none uppercase font-mono tracking-wide resize-none ${
+                  className={`p-2.5 w-full text-[9px] rounded-lg focus:outline-none uppercase font-mono tracking-wider compact-input transition-all resize-none leading-relaxed ${
                     theme === 'light' 
-                      ? 'bg-neutral-50 border border-neutral-250 text-neutral-950 focus:border-neutral-500' 
-                      : 'bg-black border border-neutral-850 text-white focus:border-emerald-500'
+                      ? 'bg-neutral-900/[0.03] hover:bg-neutral-900/[0.05] border border-neutral-950/[0.06] focus:border-neutral-950/20 text-neutral-950' 
+                      : 'bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.05] focus:border-white/25 text-white'
                   }`}
                 />
               </div>
@@ -1724,7 +1736,7 @@ Gerado eletronicamente via Livelink Simulator.
                   <div key={zone.name} className="grid grid-cols-12 gap-2 items-center">
                     <div className="col-span-3 flex items-center gap-1">
                       <span className={`font-mono text-[9px] font-black ${
-                        isZ2 ? 'text-emerald-500' : (theme === 'light' ? 'text-neutral-700' : 'text-neutral-400')
+                        isZ2 ? (theme === 'light' ? 'text-neutral-950 underline decoration-neutral-450 underline-offset-2 font-black' : 'text-white tracking-widest [text-shadow:0_0_8px_rgba(255,255,255,0.4)]') : (theme === 'light' ? 'text-neutral-700' : 'text-neutral-400')
                       }`}>{zone.name}</span>
                     </div>
                     
@@ -1734,10 +1746,10 @@ Gerado eletronicamente via Livelink Simulator.
                         value={zone.desc}
                         onChange={(e) => updateZoneDesc(i, e.target.value)}
                         placeholder="Descrição da zona"
-                        className={`px-2 py-1.5 w-full text-[9px] rounded focus:outline-none uppercase font-mono leading-none ${
+                        className={`px-2 py-1.5 w-full text-[9px] rounded-lg focus:outline-none uppercase font-mono leading-none compact-input transition-all ${
                           theme === 'light' 
-                            ? 'bg-neutral-50 border border-neutral-250 text-neutral-950 focus:border-neutral-500' 
-                            : 'bg-black border border-neutral-850 text-white focus:border-emerald-500'
+                            ? 'bg-neutral-900/[0.03] hover:bg-neutral-900/[0.05] border border-neutral-950/[0.06] focus:border-neutral-950/20 text-neutral-950' 
+                            : 'bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.05] focus:border-white/25 text-white'
                         }`}
                       />
                     </div>
@@ -1748,10 +1760,10 @@ Gerado eletronicamente via Livelink Simulator.
                         value={zone.pace}
                         onChange={(e) => updateZonePace(i, e.target.value)}
                         placeholder="Pace (ex: 5:00 - 5:30)"
-                        className={`px-2 py-1.5 w-full font-mono text-[9px] font-bold text-center rounded focus:outline-none ${
+                        className={`px-2 py-1.5 w-full font-mono text-[9px] font-bold text-center rounded-lg focus:outline-none compact-input transition-all ${
                           theme === 'light' 
-                            ? 'bg-neutral-50 border border-neutral-250 text-neutral-950 focus:border-neutral-500' 
-                            : 'bg-black border border-neutral-850 text-white focus:border-emerald-500'
+                            ? 'bg-neutral-900/[0.03] hover:bg-neutral-900/[0.05] border border-neutral-950/[0.06] focus:border-neutral-950/20 text-neutral-950' 
+                            : 'bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.05] focus:border-white/25 text-white'
                         }`}
                       />
                     </div>
@@ -1773,7 +1785,7 @@ Gerado eletronicamente via Livelink Simulator.
               }`}>
                 PRESCREVER ROTINA DIÁRIA
               </span>
-              <span className="text-[8px] font-mono font-black text-emerald-500">
+              <span className="text-[8px] font-mono font-black text-white px-2 py-0.5 rounded bg-neutral-900/40 border border-neutral-800/65">
                 EDITANDO: {formSelectedDay}
               </span>
             </div>
@@ -1781,7 +1793,8 @@ Gerado eletronicamente via Livelink Simulator.
             {/* Symmetrical day tab picker */}
             <div className="grid grid-cols-7 gap-1" id="form-day-selector">
               {['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB', 'DOM'].map((d) => {
-                const isConfigured = !!planilhaForm.prescriptions[d];
+                const prescriptions = planilhaForm.prescriptions || {};
+                const isConfigured = !!prescriptions[d];
                 const isSelected = d === formSelectedDay;
                 return (
                   <button
@@ -1803,95 +1816,95 @@ Gerado eletronicamente via Livelink Simulator.
             </div>
 
             {/* Daily Sessions form fields representation inside card */}
-            <div className="space-y-3 pt-1 text-[9px] font-mono">
+            <div className="space-y-2.5 pt-1 text-[9px] font-mono">
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1">
-                  <label className={`${theme === 'light' ? 'text-neutral-550 block font-bold' : 'text-neutral-500 block font-bold'}`}>TÍTULO (Ex: SEG - 24MIN)</label>
+                  <label className="text-[7.2px] tracking-wider text-neutral-500 dark:text-neutral-450 block font-bold uppercase mb-0.5">TÍTULO (Ex: SEG - 24MIN)</label>
                   <input 
                     type="text"
-                    value={planilhaForm.prescriptions[formSelectedDay]?.title || ''}
+                    value={(planilhaForm.prescriptions || {})[formSelectedDay]?.title || ''}
                     onChange={(e) => updatePrescriptionField(formSelectedDay, 'title', e.target.value)}
                     placeholder="SEG - 24MIN"
-                    className={`px-2.5 py-2 w-full text-[9.5px] rounded focus:outline-none uppercase font-mono ${
+                    className={`px-2.5 py-1.5 w-full text-[9px] rounded-lg focus:outline-none uppercase font-mono compact-input transition-all ${
                       theme === 'light' 
-                        ? 'bg-neutral-50 border border-neutral-250 text-neutral-950 focus:border-neutral-500' 
-                        : 'bg-black border border-neutral-850 text-white focus:border-emerald-500'
+                        ? 'bg-neutral-900/[0.03] hover:bg-neutral-900/[0.05] border border-neutral-950/[0.06] focus:border-neutral-950/20 text-neutral-950' 
+                        : 'bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.05] focus:border-white/25 text-white'
                     }`}
                   />
                 </div>
                 
                 <div className="space-y-1">
-                  <label className={`${theme === 'light' ? 'text-neutral-550 block font-bold' : 'text-neutral-555 block font-bold'}`}>TIPO DE ATIVIDADE (Badge)</label>
+                  <label className="text-[7.2px] tracking-wider text-neutral-500 dark:text-neutral-450 block font-bold uppercase mb-0.5">TIPO DE ATIVIDADE (Badge)</label>
                   <input 
                     type="text"
-                    value={planilhaForm.prescriptions[formSelectedDay]?.badge || ''}
+                    value={(planilhaForm.prescriptions || {})[formSelectedDay]?.badge || ''}
                     onChange={(e) => updatePrescriptionField(formSelectedDay, 'badge', e.target.value)}
                     placeholder="CORRIDA PRESCRITA"
-                    className={`px-2.5 py-2 w-full text-[9.5px] rounded focus:outline-none uppercase font-mono ${
+                    className={`px-2.5 py-1.5 w-full text-[9px] rounded-lg focus:outline-none uppercase font-mono compact-input transition-all ${
                       theme === 'light' 
-                        ? 'bg-neutral-50 border border-neutral-250 text-neutral-950 focus:border-neutral-500' 
-                        : 'bg-black border border-neutral-850 text-white focus:border-emerald-500'
+                        ? 'bg-neutral-900/[0.03] hover:bg-neutral-900/[0.05] border border-neutral-950/[0.06] focus:border-neutral-950/20 text-neutral-950' 
+                        : 'bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.05] focus:border-white/25 text-white'
                     }`}
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className={`${theme === 'light' ? 'text-neutral-550 block font-bold' : 'text-neutral-555 block font-bold'}`}>ESTRUTURA DE SUBCATEGORIA (Sub-badge)</label>
+                <label className="text-[7.2px] tracking-wider text-neutral-500 dark:text-neutral-450 block font-bold uppercase mb-0.5">ESTRUTURA DE SUBCATEGORIA (Sub-badge)</label>
                 <input 
                   type="text"
-                  value={planilhaForm.prescriptions[formSelectedDay]?.subBadge || ''}
+                  value={(planilhaForm.prescriptions || {})[formSelectedDay]?.subBadge || ''}
                   onChange={(e) => updatePrescriptionField(formSelectedDay, 'subBadge', e.target.value)}
                   placeholder="ZONAS DE TREINAMENTO"
-                  className={`px-2.5 py-2 w-full text-[9.5px] rounded focus:outline-none uppercase font-mono ${
+                  className={`px-2.5 py-1.5 w-full text-[9px] rounded-lg focus:outline-none uppercase font-mono compact-input transition-all ${
                     theme === 'light' 
-                      ? 'bg-neutral-50 border border-neutral-250 text-neutral-950 focus:border-neutral-500' 
-                      : 'bg-black border border-neutral-850 text-white focus:border-emerald-500'
+                      ? 'bg-neutral-900/[0.03] hover:bg-neutral-900/[0.05] border border-neutral-950/[0.06] focus:border-neutral-950/20 text-neutral-950' 
+                      : 'bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.05] focus:border-white/25 text-white'
                   }`}
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="block font-bold text-neutral-550 dark:text-neutral-400">1. AQUECIMENTO (Warm Up)</label>
+                <label className="text-[7.2px] tracking-wider text-neutral-500 dark:text-neutral-400 block font-bold uppercase mb-0.5">1. AQUECIMENTO (Warm Up)</label>
                 <textarea 
                   rows={2}
-                  value={planilhaForm.prescriptions[formSelectedDay]?.warmup || ''}
+                  value={(planilhaForm.prescriptions || {})[formSelectedDay]?.warmup || ''}
                   onChange={(e) => updatePrescriptionField(formSelectedDay, 'warmup', e.target.value)}
                   placeholder="Descreva o aquecimento (ex: 8min leve)..."
-                  className={`p-2.5 w-full text-[9.5px] rounded focus:outline-none lowercase font-mono leading-relaxed resize-none ${
+                  className={`p-2 w-full text-[9px] rounded-lg focus:outline-none lowercase font-mono leading-relaxed resize-none compact-input transition-all ${
                     theme === 'light' 
-                      ? 'bg-neutral-50 border border-neutral-250 text-neutral-950 focus:border-neutral-500' 
-                      : 'bg-black border border-neutral-850 text-white focus:border-emerald-500'
+                      ? 'bg-neutral-900/[0.03] hover:bg-neutral-900/[0.05] border border-neutral-950/[0.06] focus:border-neutral-950/20 text-neutral-950' 
+                      : 'bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.05] focus:border-white/25 text-white'
                   }`}
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="block font-bold text-neutral-550 dark:text-neutral-350">2. BLOCO PRINCIPAL (Main Set)</label>
+                <label className="text-[7.2px] tracking-wider text-neutral-500 dark:text-neutral-350 block font-bold uppercase mb-0.5">2. BLOCO PRINCIPAL (Main Set)</label>
                 <textarea 
                   rows={3}
-                  value={planilhaForm.prescriptions[formSelectedDay]?.mainSet || ''}
+                  value={(planilhaForm.prescriptions || {})[formSelectedDay]?.mainSet || ''}
                   onChange={(e) => updatePrescriptionField(formSelectedDay, 'mainSet', e.target.value)}
                   placeholder="Descreva o bloco principal (ex: 6x2min forte/2min leve)..."
-                  className={`p-2.5 w-full text-[9.5px] rounded focus:outline-none lowercase font-mono leading-relaxed resize-none ${
+                  className={`p-2 w-full text-[9px] rounded-lg focus:outline-none lowercase font-mono leading-relaxed resize-none compact-input transition-all ${
                     theme === 'light' 
-                      ? 'bg-neutral-50 border border-neutral-250 text-neutral-955 focus:border-neutral-500' 
-                      : 'bg-black border border-neutral-850 text-white focus:border-emerald-500'
+                      ? 'bg-neutral-900/[0.03] hover:bg-neutral-900/[0.05] border border-neutral-950/[0.06] focus:border-neutral-950/20 text-neutral-950' 
+                      : 'bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.05] focus:border-white/25 text-white'
                   }`}
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="block font-bold text-neutral-550 dark:text-neutral-450">3. RETORNO À CALMA (Cool Down)</label>
+                <label className="text-[7.2px] tracking-wider text-neutral-500 dark:text-neutral-450 block font-bold uppercase mb-0.5">3. RETORNO À CALMA (Cool Down)</label>
                 <textarea 
                   rows={2}
-                  value={planilhaForm.prescriptions[formSelectedDay]?.coolDown || ''}
+                  value={(planilhaForm.prescriptions || {})[formSelectedDay]?.coolDown || ''}
                   onChange={(e) => updatePrescriptionField(formSelectedDay, 'coolDown', e.target.value)}
                   placeholder="Descreva o retorno à calma (ex: 8min leve)..."
-                  className={`p-2.5 w-full text-[9.5px] rounded focus:outline-none lowercase font-mono leading-relaxed resize-none ${
+                  className={`p-2 w-full text-[9px] rounded-lg focus:outline-none lowercase font-mono leading-relaxed resize-none compact-input transition-all ${
                     theme === 'light' 
-                      ? 'bg-neutral-50 border border-neutral-250 text-neutral-955 focus:border-neutral-500' 
-                      : 'bg-black border border-neutral-850 text-white focus:border-emerald-500'
+                      ? 'bg-neutral-900/[0.03] hover:bg-neutral-900/[0.05] border border-neutral-950/[0.06] focus:border-neutral-950/20 text-neutral-950' 
+                      : 'bg-white/[0.02] hover:bg-white/[0.04] border border-white/[0.05] focus:border-white/25 text-white'
                   }`}
                 />
               </div>
@@ -1901,45 +1914,51 @@ Gerado eletronicamente via Livelink Simulator.
           {/* TRIGGER PUBLISHING ACTION BUTTON */}
           <button
             onClick={handlePublishPlanilha}
-            className="w-full mt-2 py-4 px-6 border border-emerald-500 bg-emerald-500 text-black font-mono font-black text-[10px] tracking-[0.25em] text-center cursor-pointer hover:bg-emerald-400 hover:border-emerald-400 transition-all rounded-xl uppercase flex items-center justify-center gap-2.5 shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+            className={`w-full mt-2 py-4 px-6 font-mono font-black text-[10px] tracking-[0.25em] text-center cursor-pointer transition-all rounded-xl uppercase flex items-center justify-center gap-2.5 shadow-md ${
+              theme === 'light'
+                ? 'bg-neutral-950 text-white hover:bg-neutral-800 border-none'
+                : 'bg-white text-black hover:bg-neutral-200 border-none'
+            }`}
             id="btn-publish-gxp-stream"
           >
             <Send className="w-4 h-4" />
             Salvar &amp; Projetar Planilha
           </button>
-        </div>
-      )}
+          </div>
 
-      {/* TAB 3: WORKOUT REGISTRATION FEEDBACKS */}
-      {activeTab === 'FEEDBACK' && athletes.length > 0 && (
-        <div className="flex-1 flex flex-col gap-4 mt-4 animate-fade-in" id="feedback-content-area">
-          <div className={`text-[8.5px] font-mono tracking-widest uppercase flex justify-between ${
-            theme === 'light' ? 'text-neutral-600' : 'text-neutral-500'
+          {/* COLUMN 3: REAL-TIME STUDENT SENSORY WORKOUT FEEDBACKS LOGS (Desktop persistent, Mobile conditional) */}
+          <div className={`flex-grow flex flex-col gap-4 lg:col-span-3 ${activeTab === 'FEEDBACK' ? 'flex' : 'hidden lg:flex'}`} id="feedback-content-area">
+          <div className={`text-[8px] font-mono tracking-widest uppercase flex justify-between items-center ${
+            theme === 'light' ? 'text-neutral-600' : 'text-neutral-505'
           }`}>
             <span>FEEDBACK SEMANAL</span>
-            <span className="text-emerald-500 font-bold">ATUALIZAÇÃO EM TEMPO REAL</span>
+            <span className={`font-mono font-bold tracking-widest text-[6.5px] px-1.5 py-0.5 rounded-md ${theme === 'light' ? 'text-neutral-500 bg-neutral-950/[0.04]' : 'text-neutral-400 bg-white/[0.04]'}`}>ATUALIZAÇÃO EM TEMPO REAL</span>
           </div>
 
           {/* SELECTED ATHLETE PROFILE SUMMARY CARD */}
-          <div className={`p-4 flex justify-between items-center transition-all duration-300 rounded-2xl liquid-sheen ${
-            theme === 'light' ? 'liquid-glass-light shadow-md' : 'liquid-glass shadow-lg'
+          <div className={`p-3 flex justify-between items-center transition-all duration-300 rounded-xl liquid-sheen ${
+            theme === 'light' ? 'liquid-glass-light border border-neutral-950/[0.03] shadow-xs' : 'liquid-glass border border-white/[0.03] shadow-md'
           }`}>
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-full bg-emerald-500/10 border border-emerald-500 text-emerald-500 flex items-center justify-center font-mono font-black text-sm">
+            <div className="flex items-center gap-2">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center font-mono font-black text-xs ${
+                theme === 'light' ? 'bg-neutral-950/5 border border-neutral-950/10 text-neutral-900' : 'bg-white/5 border border-white/10 text-white'
+              }`}>
                 {selectedAthlete.avatarSeed}
               </div>
               <div>
-                <h3 className={`text-xs font-bold font-mono tracking-wide capitalize ${
-                  theme === 'light' ? 'text-neutral-950' : 'text-white'
+                <h3 className={`text-[10.5px] font-bold font-mono tracking-wide capitalize ${
+                  theme === 'light' ? 'text-neutral-900' : 'text-white'
                 }`}>{selectedAthlete.name}</h3>
               </div>
             </div>
             <div className="text-right">
-              <span className="text-[9px] font-mono text-emerald-500 font-bold block">
+              <span className={`text-[8.5px] font-mono font-bold block ${
+                theme === 'light' ? 'text-neutral-900' : 'text-white'
+              }`}>
                 META: {selectedAthlete.targetPace} / KM
               </span>
-              <span className={`text-[7px] font-mono block uppercase ${
-                theme === 'light' ? 'text-neutral-550' : 'text-neutral-550'
+              <span className={`text-[6.5px] font-mono block uppercase ${
+                theme === 'light' ? 'text-neutral-500' : 'text-neutral-500'
               }`}>
                 Pace Alvo do Treino
               </span>
@@ -1947,20 +1966,20 @@ Gerado eletronicamente via Livelink Simulator.
           </div>
 
           {/* ANALYTICS HUB TRIGGER ACTIONS (RELATÓRIO & EVOLUÇÃO GRÁFICA) */}
-          <div className="grid grid-cols-2 gap-2.5 font-mono">
+          <div className="grid grid-cols-2 gap-2 font-mono">
             <button
               onClick={() => {
                 setReportCopied(false);
                 setIsReportModalOpen(true);
               }}
-              className={`py-3.5 px-3 border rounded-xl font-black text-[9px] tracking-widest uppercase flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-97 select-none ${
+              className={`py-2.5 px-3 rounded-lg font-bold text-[8px] tracking-wider uppercase flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-97 select-none ${
                 theme === 'light'
-                  ? 'bg-white hover:bg-neutral-50 border-neutral-200 text-neutral-800 shadow-xs'
-                  : 'bg-neutral-950 border-neutral-900 text-neutral-300 hover:bg-neutral-900 hover:border-neutral-800'
+                  ? 'bg-neutral-950/[0.03] border border-neutral-950/[0.06] hover:bg-neutral-950/[0.06] text-neutral-800'
+                  : 'bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] text-neutral-300'
               }`}
               id="btn-trigger-athlete-report"
             >
-              <FileText className="w-3.5 h-3.5 text-emerald-500 stroke-[2]" />
+              <FileText className="w-3 h-3 text-neutral-700 dark:text-neutral-400 stroke-[2.5]" />
               Gerar Relatório
             </button>
 
@@ -1969,14 +1988,14 @@ Gerado eletronicamente via Livelink Simulator.
                 setHoveredPointIndex(4);
                 setIsEvolutionModalOpen(true);
               }}
-              className={`py-3.5 px-3 border rounded-xl font-black text-[9px] tracking-widest uppercase flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-97 select-none ${
+              className={`py-2.5 px-3 rounded-lg font-bold text-[8px] tracking-wider uppercase flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-97 select-none ${
                 theme === 'light'
-                  ? 'bg-white hover:bg-neutral-50 border-neutral-200 text-neutral-800 shadow-xs'
-                  : 'bg-neutral-950 border-neutral-900 text-neutral-300 hover:bg-neutral-900 hover:border-emerald-950/20'
+                  ? 'bg-neutral-950/[0.03] border border-neutral-950/[0.06] hover:bg-neutral-950/[0.06] text-neutral-800'
+                  : 'bg-white/[0.02] border border-white/[0.05] hover:bg-white/[0.04] text-neutral-300'
               }`}
               id="btn-trigger-athlete-chart"
             >
-              <TrendingUp className="w-3.5 h-3.5 text-emerald-500 stroke-[2]" />
+              <TrendingUp className="w-3 h-3 text-neutral-700 dark:text-neutral-400 stroke-[2.5]" />
               Evolução Real
             </button>
           </div>
@@ -1986,8 +2005,8 @@ Gerado eletronicamente via Livelink Simulator.
             {getAthleteWeeklyFeedback(selectedAthlete.id).map((week) => {
               const isExpanded = !!expandedWeeks[week.id];
               return (
-                <div key={week.id} className={`overflow-hidden transition-all duration-300 rounded-2xl ${
-                  theme === 'light' ? 'liquid-glass-light shadow-sm' : 'liquid-glass'
+                <div key={week.id} className={`overflow-hidden transition-all duration-300 rounded-xl ${
+                  theme === 'light' ? 'liquid-glass-light border border-neutral-950/[0.03] shadow-xs' : 'liquid-glass border border-white/[0.03] shadow-sm'
                 }`}>
                   {/* Accordion Trigger/Header */}
                   <button
@@ -1997,23 +2016,23 @@ Gerado eletronicamente via Livelink Simulator.
                         [week.id]: !prev[week.id]
                       }));
                     }}
-                    className={`w-full text-left p-4 border-b flex justify-between items-center transition-colors cursor-pointer ${
+                    className={`w-full text-left p-3 flex justify-between items-center transition-colors cursor-pointer select-none ${
                       theme === 'light' 
-                        ? 'bg-neutral-50 hover:bg-neutral-100 border-neutral-200' 
-                        : 'bg-neutral-950 hover:bg-neutral-900/40 border-neutral-900'
+                        ? 'bg-neutral-950/[0.01] hover:bg-neutral-950/[0.03]' 
+                        : 'bg-white/[0.01] hover:bg-white/[0.03]'
                     }`}
                   >
-                    <div className="flex flex-col gap-1">
-                      <span className={`text-[9px] font-mono font-bold tracking-wide uppercase ${
-                        theme === 'light' ? 'text-neutral-850' : 'text-white'
+                    <div className="flex flex-col gap-0.5">
+                      <span className={`text-[8.5px] font-mono font-bold tracking-wide uppercase ${
+                        theme === 'light' ? 'text-neutral-800' : 'text-neutral-200'
                       }`}>
                         {week.weekName}
                       </span>
-                      <div className="flex items-center gap-2 text-[7.5px] font-mono">
-                        <span className={`px-1 rounded ${
+                      <div className="flex items-center gap-1.5 text-[7px] font-mono">
+                        <span className={`px-1 py-0.2 rounded text-[6.5px] ${
                           week.status === 'Em andamento' 
                             ? (theme === 'light' ? 'bg-amber-100 text-amber-700 border border-amber-300' : 'bg-amber-950/40 text-amber-500 border border-amber-500/40') 
-                            : (theme === 'light' ? 'bg-emerald-100 text-emerald-750 border border-emerald-300' : 'bg-emerald-950/40 text-emerald-500 border border-emerald-500/40')
+                            : (theme === 'light' ? 'bg-neutral-950 text-white font-extrabold' : 'bg-white text-black font-extrabold')
                         } font-bold`}>
                           {week.status.toUpperCase()}
                         </span>
@@ -2022,7 +2041,9 @@ Gerado eletronicamente via Livelink Simulator.
                         </span>
                       </div>
                     </div>
-                    <span className="text-[8.5px] text-emerald-500 font-bold transition-transform font-mono">
+                    <span className={`text-[7.5px] font-bold transition-transform font-mono ${
+                      theme === 'light' ? 'text-neutral-600' : 'text-neutral-400'
+                    }`}>
                       {isExpanded ? '▲ ENCOLHER' : '▼ EXPANDIR'}
                     </span>
                   </button>
@@ -2034,7 +2055,7 @@ Gerado eletronicamente via Livelink Simulator.
                     }`}>
                       {week.days.length === 0 ? (
                         <span className={`text-[8px] italic uppercase text-center py-2 ${
-                          theme === 'light' ? 'text-neutral-500' : 'text-neutral-600'
+                          theme === 'light' ? 'text-neutral-505' : 'text-neutral-600'
                         }`}>Sem sessões registradas nesta semana</span>
                       ) : (
                         week.days.map((d) => (
@@ -2059,7 +2080,7 @@ Gerado eletronicamente via Livelink Simulator.
                                 <span className={theme === 'light' ? 'text-neutral-450 uppercase text-[5.5px]' : 'text-neutral-600 uppercase text-[5.5px]'}>AQUECIMENTO</span>
                                 <span className={`${
                                   d.warmup === 'CONCLUÍDO' 
-                                    ? (theme === 'light' ? 'text-emerald-600 font-extrabold' : 'text-emerald-400 font-extrabold') 
+                                    ? (theme === 'light' ? 'text-neutral-950 font-black' : 'text-white font-black') 
                                     : d.warmup === 'ADAPTADO' 
                                     ? 'text-yellow-650 font-extrabold' 
                                     : 'text-neutral-400 line-through font-normal'
@@ -2073,7 +2094,7 @@ Gerado eletronicamente via Livelink Simulator.
                                 <span className={theme === 'light' ? 'text-neutral-450 uppercase text-[5.5px]' : 'text-neutral-600 uppercase text-[5.5px]'}>BLOCO PRINCIPAL</span>
                                 <span className={`${
                                   d.mainSet === 'CONCLUÍDO' 
-                                    ? (theme === 'light' ? 'text-emerald-600 font-extrabold' : 'text-emerald-400 font-extrabold') 
+                                    ? (theme === 'light' ? 'text-neutral-950 font-black' : 'text-white font-black') 
                                     : d.mainSet === 'ADAPTADO' 
                                     ? 'text-yellow-650 font-extrabold' 
                                     : 'text-neutral-400 line-through font-normal'
@@ -2085,7 +2106,7 @@ Gerado eletronicamente via Livelink Simulator.
                                 <span className={theme === 'light' ? 'text-neutral-450 uppercase text-[5.5px]' : 'text-neutral-600 uppercase text-[5.5px]'}>RECUPERAÇÃO</span>
                                 <span className={`${
                                   d.coolDown === 'CONCLUÍDO' 
-                                    ? (theme === 'light' ? 'text-emerald-600 font-extrabold' : 'text-emerald-400 font-extrabold') 
+                                    ? (theme === 'light' ? 'text-neutral-950 font-black' : 'text-white font-black') 
                                     : d.coolDown === 'ADAPTADO' 
                                     ? 'text-yellow-650 font-extrabold' 
                                     : 'text-neutral-400 line-through font-normal'
@@ -2104,9 +2125,9 @@ Gerado eletronicamente via Livelink Simulator.
                                   <span className={`px-1 py-0.2 rounded text-[6.5px] ${
                                     theme === 'light' ? 'bg-neutral-200 text-neutral-800' : 'bg-neutral-900 text-neutral-300'
                                   }`}>PERCEPÇÃO: {d.feeling}</span>
-                                  <span className="text-emerald-500 font-black">ESFORÇO: {d.effort}/10</span>
+                                  <span className={`font-black ${theme === 'light' ? 'text-neutral-950' : 'text-neutral-200'}`}>ESFORÇO: {d.effort}/10</span>
                                 </div>
-                                <p className={`text-[8px] italic uppercase leading-relaxed font-sans pl-1.5 border-l border-emerald-500/50 ${
+                                <p className={`text-[8px] italic uppercase leading-relaxed font-sans pl-1.5 border-l border-neutral-400 dark:border-neutral-700 ${
                                   theme === 'light' ? 'text-neutral-700' : 'text-neutral-400'
                                 }`}>
                                   "{d.comment}"
@@ -2126,6 +2147,8 @@ Gerado eletronicamente via Livelink Simulator.
               );
             })}
           </div>
+          </div>
+
         </div>
       )}
 
@@ -2139,11 +2162,13 @@ Gerado eletronicamente via Livelink Simulator.
           id="trainer-empty-state-guide"
         >
           {/* Decorative Sparkles */}
-          <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto mb-4 animate-pulse">
+          <div className="w-12 h-12 rounded-full bg-neutral-950/10 dark:bg-white/10 text-neutral-950 dark:text-white flex items-center justify-center mx-auto mb-4 animate-pulse">
             <Sparkles className="w-6 h-6 animate-pulse" />
           </div>
 
-          <h2 className="text-xs font-black font-mono tracking-widest uppercase mb-2 text-emerald-400">
+          <h2 className={`text-xs font-black font-mono tracking-widest uppercase mb-2 ${
+            theme === 'light' ? 'text-neutral-950' : 'text-neutral-100'
+          }`}>
             🚀 SISTEMA PRONTO & TOTALMENTE LIMPO!
           </h2>
           
@@ -2156,12 +2181,16 @@ Gerado eletronicamente via Livelink Simulator.
           <div className={`text-left border rounded-xl p-4 space-y-3.5 mb-5 ${
             theme === 'light' ? 'bg-neutral-50/50 border-neutral-150' : 'bg-black/40 border-neutral-900'
           }`}>
-            <span className="text-[9px] font-bold font-mono tracking-wider text-emerald-400 uppercase block">
+            <span className={`text-[9px] font-bold font-mono tracking-wider uppercase block ${
+              theme === 'light' ? 'text-neutral-905' : 'text-neutral-200'
+            }`}>
               COMO CONECTAR OS SEUS ALUNOS REAL-TIME:
             </span>
 
             <div className="flex gap-2.5 items-start">
-              <span className="w-4 h-4 rounded-full bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-[9px] font-mono font-bold text-emerald-400 shrink-0 mt-0.5">1</span>
+              <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-mono font-bold shrink-0 mt-0.5 ${
+                theme === 'light' ? 'bg-neutral-950/10 text-neutral-950' : 'bg-white/10 text-white'
+              }`}>1</span>
               <div>
                 <strong className="text-[10px] block font-bold">Compartilhe o Aplicativo</strong>
                 <p className="text-[9px] text-neutral-500 leading-normal">
@@ -2171,17 +2200,21 @@ Gerado eletronicamente via Livelink Simulator.
             </div>
 
             <div className="flex gap-2.5 items-start">
-              <span className="w-4 h-4 rounded-full bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-[9px] font-mono font-bold text-emerald-400 shrink-0 mt-0.5">2</span>
+              <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-mono font-bold shrink-0 mt-0.5 ${
+                theme === 'light' ? 'bg-neutral-950/10 text-neutral-950' : 'bg-white/10 text-white'
+              }`}>2</span>
               <div>
                 <strong className="text-[10px] block font-bold">Criação de Conta Gratuita</strong>
                 <p className="text-[9px] text-neutral-500 leading-normal">
-                  Seus alunos devem acessar a opção <span className="font-bold underline text-neutral-400">Criar Perfil</span> no menu de início, selecionando a categoria <span className="text-emerald-500 font-bold">ATLETA</span> e informando Celular e Senha própria.
+                  Seus alunos devem acessar a opção <span className="font-bold underline text-neutral-400">Criar Perfil</span> no menu de início, selecionando a categoria <span className="font-extrabold underline">ATLETA</span> e informando Celular e Senha própria.
                 </p>
               </div>
             </div>
 
             <div className="flex gap-2.5 items-start">
-              <span className="w-4 h-4 rounded-full bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center text-[9px] font-mono font-bold text-emerald-400 shrink-0 mt-0.5">3</span>
+              <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-mono font-bold shrink-0 mt-0.5 ${
+                theme === 'light' ? 'bg-neutral-950/10 text-neutral-950' : 'bg-white/10 text-white'
+              }`}>3</span>
               <div>
                 <strong className="text-[10px] block font-bold">Sincronização Automática Real-Time</strong>
                 <p className="text-[9px] text-neutral-500 leading-normal">
@@ -2194,7 +2227,9 @@ Gerado eletronicamente via Livelink Simulator.
           <div className="flex justify-center gap-2">
             <button
               onClick={onBackToRunner}
-              className="py-2.5 px-4 rounded-xl text-[9px] font-mono font-bold tracking-widest bg-emerald-500 hover:bg-emerald-600 text-black cursor-pointer uppercase transition-all duration-300"
+              className={`py-2.5 px-4 rounded-xl text-[9px] font-mono font-bold tracking-widest cursor-pointer uppercase transition-all duration-300 ${
+                theme === 'light' ? 'bg-neutral-950 hover:bg-neutral-800 text-white' : 'bg-white hover:bg-neutral-200 text-black'
+              }`}
             >
               Ir para Tela de início
             </button>

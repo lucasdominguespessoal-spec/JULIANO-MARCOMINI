@@ -13,9 +13,9 @@ try {
   console.warn("Could not read import.meta.env safely on host environment:", e);
 }
 
-const rawUrl = envUrl || 'https://kgmnvjhyuhpxglpsvpnz.supabase.co/rest/v1/';
+const rawUrl = envUrl || 'https://ejztgxzmwutphlzxqmba.supabase.co/rest/v1/';
 const cleanUrl = rawUrl.replace(/\/rest\/v1\/?$/, ''); // Strip rest/v1 suffix if it exists
-const finalAnonKey = anonKey || 'sb_publishable_PETS7v3HtnOzOlobv2z3QQ_v61zppLl';
+const finalAnonKey = anonKey || 'sb_publishable_CXGCH-4vO45tavB2MEdPGQ_cZY9kHDG';
 
 // Export clean URL so other components can access it fail-safe
 export const supabaseUrl = cleanUrl;
@@ -46,18 +46,132 @@ try {
 export const supabase = supabaseClient;
 
 // Useful copyable SQL snippet to help users bootstrap their DB tables
-export const SUPABASE_BOOTSTRAP_SQL = `-- Comando para criar a tabela de sincronização no painel SQL do Supabase:
+export const SUPABASE_BOOTSTRAP_SQL = `-- =========================================================================
+-- SCRIPT DE CRIAÇÃO E CONFIGURAÇÃO DA BASE DE DADOS DO SUPABASE
+-- Execute este script no "SQL Editor" do seu painel Supabase.
+-- =========================================================================
+
+-- 1. TABELA DE SINCRONIZAÇÃO EM DOCUMENTOS (KEY-VALUE ENGINE)
+-- Mantida ativa para compatibilidade instantânea com o sistema de sincronização atual.
 CREATE TABLE IF NOT EXISTS athlete_sync (
   key TEXT PRIMARY KEY,
   value JSONB NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW())
 );
 
--- Ativar acesso público de leitura/escrita para demonstração (ou configure RLS se preferir)
+-- Ativar segurança para athlete_sync
 ALTER TABLE athlete_sync ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Leitura pública livre" ON athlete_sync;
+DROP POLICY IF EXISTS "Escrita pública livre" ON athlete_sync;
+DROP POLICY IF EXISTS "Atualização pública livre" ON athlete_sync;
+
 CREATE POLICY "Leitura pública livre" ON athlete_sync FOR SELECT USING (true);
 CREATE POLICY "Escrita pública livre" ON athlete_sync FOR INSERT WITH CHECK (true);
 CREATE POLICY "Atualização pública livre" ON athlete_sync FOR UPDATE USING (true);
+
+
+-- 2. SCHEMAS RELACIONAIS DE ALTA ASSINATURA (MODERNIZADOS E ESTRUTURADOS)
+-- Ideal para relatórios de Business Intelligence (BI), cruzamento de dados e consultas SQL puras.
+
+-- 2.1 Tabela de Usuários (Treinadores e Atletas)
+CREATE TABLE IF NOT EXISTS app_users (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  phone TEXT UNIQUE NOT NULL,
+  password TEXT NOT NULL DEFAULT '1234',
+  role TEXT NOT NULL CHECK (role IN ('COACH', 'ATHLETE')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 2.2 Tabela de Planilhas de Treino (Macroestrutura por Aluno)
+CREATE TABLE IF NOT EXISTS planilhas (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  athlete_id TEXT REFERENCES app_users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  sport TEXT NOT NULL DEFAULT 'Corrida de Rua',
+  valid_until DATE,
+  objective TEXT,
+  macrocycle_focus TEXT,
+  zones_config JSONB,   -- Configuração em JSON de faixas de ritmo/Zonas (Z1 a Z5)
+  weeks_data JSONB,     -- Lista estruturada de atividades semanais detalhadas
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 2.3 Registro Simples de Progresso e Conclusão diária
+CREATE TABLE IF NOT EXISTS workout_states (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  athlete_id TEXT REFERENCES app_users(id) ON DELETE CASCADE,
+  day_key TEXT NOT NULL, -- Identificador de progresso como 'W1D1', 'W2D3'
+  warmup_status TEXT NOT NULL DEFAULT 'PENDENTE' CHECK (warmup_status IN ('PENDENTE', 'CONCLUÍDO', 'ADAPTADO')),
+  main_set_status TEXT NOT NULL DEFAULT 'PENDENTE' CHECK (main_set_status IN ('PENDENTE', 'CONCLUÍDO', 'ADAPTADO')),
+  cooldown_status TEXT NOT NULL DEFAULT 'PENDENTE' CHECK (cooldown_status IN ('PENDENTE', 'CONCLUÍDO', 'ADAPTADO')),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(athlete_id, day_key)
+);
+
+-- 2.4 Feedbacks de Treinos e Avaliações de Percepção Subjetiva de Esforço (PSE)
+CREATE TABLE IF NOT EXISTS workout_feedbacks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  athlete_id TEXT REFERENCES app_users(id) ON DELETE CASCADE,
+  week_index INT NOT NULL,
+  day_index INT NOT NULL,
+  rating_effort INT CHECK (rating_effort BETWEEN 1 AND 10), -- Fadiga/Esforço Borg Adaptado
+  feeling TEXT, -- Sensação: 'ótimo', 'cansado', 'lesionado', etc.
+  comments TEXT,
+  completed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(athlete_id, week_index, day_index)
+);
+
+-- 2.5 Registro de Atividades Completadas (Logs de GPS / Corridas de Rua)
+CREATE TABLE IF NOT EXISTS activity_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  athlete_id TEXT REFERENCES app_users(id) ON DELETE CASCADE,
+  title TEXT,
+  workout_date DATE DEFAULT CURRENT_DATE,
+  distance_km NUMERIC(5, 2),
+  duration_seconds INT,
+  cadence INT,
+  heart_rate INT,
+  elevation_gain INT,
+  telemetry_stream JSONB, -- Histórico de pulsações por segundo para análise gráfica
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+
+-- 3. ESPECIFICAÇÕES DE SEGURANÇA (ROW LEVEL SECURITY)
+ALTER TABLE app_users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE planilhas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE workout_states ENABLE ROW LEVEL SECURITY;
+ALTER TABLE workout_feedbacks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE activity_logs ENABLE ROW LEVEL SECURITY;
+
+-- Criação de Políticas de Demonstração (Permissivas para facilidade inicial)
+DROP POLICY IF EXISTS "Acesso público livre users" ON app_users;
+CREATE POLICY "Acesso público livre users" ON app_users FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Acesso público livre planilhas" ON planilhas;
+CREATE POLICY "Acesso público livre planilhas" ON planilhas FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Acesso público livre workout_states" ON workout_states;
+CREATE POLICY "Acesso público livre workout_states" ON workout_states FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Acesso público livre workout_feedbacks" ON workout_feedbacks;
+CREATE POLICY "Acesso público livre workout_feedbacks" ON workout_feedbacks FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Acesso público livre activity_logs" ON activity_logs;
+CREATE POLICY "Acesso público livre activity_logs" ON activity_logs FOR ALL USING (true) WITH CHECK (true);
+
+
+-- 4. CARGA INICIAL DE REGISTROS (COUT & SEED DATA)
+-- Registra os usuários base para que a sincronização relacional possa funcionar no Supabase.
+INSERT INTO app_users (id, name, phone, password, role) VALUES
+  ('treinador', 'TREINADOR', '0', '1234', 'COACH'),
+  ('lucas', 'LUCAS DOMINGUES', '1', '1234', 'ATHLETE'),
+  ('gustavo', 'GUSTAVO HENRIQUE (ALFA)', '2', '1234', 'ATHLETE'),
+  ('mariana', 'MARIANA COSTA (BETA)', '3', '1234', 'ATHLETE'),
+  ('paula', 'PAULA ALBUQUERQUE (DELTA)', '4', '1234', 'ATHLETE')
+ON CONFLICT (id) DO NOTHING;
 `;
 
 /**

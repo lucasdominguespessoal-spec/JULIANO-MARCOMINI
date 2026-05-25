@@ -223,7 +223,7 @@ export default function RunnerSimulator({ athleteCode, onNavigateToDashboard, on
 
         {/* Heart Rate Progression widget using liquid-glass style design */}
         <div className="flex items-center gap-3 mt-8 px-5 py-2.5 rounded-full liquid-glass shadow-lg font-mono text-[10px] tracking-widest transition-all hover:scale-102">
-          <Activity className="w-3.5 h-3.5 text-emerald-400 animate-pulse shadow-[0_0_8px_#10b981]" />
+          <Activity className="w-3.5 h-3.5 text-white animate-pulse drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]" />
           <span className="text-neutral-200 font-bold">{metrics.heartRate} <span className="text-neutral-500">BPM</span></span>
           <div className="w-[1px] h-3 bg-white/10" />
           <span className="text-neutral-400">CAD: 178 SPM</span>
@@ -234,10 +234,10 @@ export default function RunnerSimulator({ athleteCode, onNavigateToDashboard, on
       <div className="p-5 z-10 rounded-t-3xl liquid-glass border-t border-white/5 space-y-4 shadow-2xl">
         <div className="flex justify-between items-center text-[9px] font-mono text-neutral-400 uppercase tracking-widest">
           <span className="flex items-center gap-1.5 font-bold text-white">
-            <Zap className="w-3 h-3 text-emerald-400 animate-bounce" />
+            <Zap className="w-3 h-3 text-white animate-bounce" />
             INTENSIDADE ATIVA
           </span>
-          <span className="text-emerald-400 font-bold">{intensity}%</span>
+          <span className="text-white font-bold">{intensity}%</span>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-[8px] font-mono text-neutral-600">RELAXADO</span>
@@ -282,7 +282,7 @@ export default function RunnerSimulator({ athleteCode, onNavigateToDashboard, on
             className="flex-none p-3.5 rounded-xl border border-neutral-800 hover:border-white hover:bg-white/5 transition-all active:scale-95 cursor-pointer"
             title="Ir para Analytics"
           >
-            <ArrowRight className="w-4 h-4 text-emerald-400" />
+            <ArrowRight className="w-4 h-4 text-white" />
           </button>
         </div>
       </div>
